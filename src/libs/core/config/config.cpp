@@ -55,7 +55,7 @@ void Config::load() {
     if (exist("files_path")) {
         files_path = home_path + "/" + kv["files_path"];
     } else {
-        files_path = home_path + "/files/"; // Default files path
+        files_path = home_path + "data/files/"; // Default files path
     }
         
 }

@@ -24,3 +24,4 @@ add_subdirectory(src/libs/ta/volumebox)
 
 
 add_subdirectory(src/scripts/tests/test1)
+add_subdirectory(src/scripts/market_anal)
