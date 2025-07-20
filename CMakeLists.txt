@@ -13,5 +13,14 @@ project(cryptosaba)
 add_subdirectory(src/libs/utils)
 add_subdirectory(src/libs/core/config)
 add_subdirectory(src/libs/core/pubsub)
+add_subdirectory(src/libs/trade)
+add_subdirectory(src/libs/market)
+
+add_subdirectory(src/libs/ta/logscale)
+add_subdirectory(src/libs/ta/zigzag)
+add_subdirectory(src/libs/ta/stepper)
+add_subdirectory(src/libs/ta/frames)
+add_subdirectory(src/libs/ta/volumebox)
+
 
 add_subdirectory(src/scripts/tests/test1)
