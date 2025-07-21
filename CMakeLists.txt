@@ -17,6 +17,7 @@ add_subdirectory(src/libs/trade)
 add_subdirectory(src/libs/market)
 
 add_subdirectory(src/libs/ta/logscale)
+add_subdirectory(src/libs/ta/candles)
 add_subdirectory(src/libs/ta/zigzag)
 add_subdirectory(src/libs/ta/stepper)
 add_subdirectory(src/libs/ta/frames)
