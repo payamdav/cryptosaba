@@ -1,0 +1,2 @@
+add_library(up_trend_line_zigzag SHARED up_trend_line_zigzag.cpp)
+target_link_libraries(up_trend_line_zigzag zigzag pubsub)

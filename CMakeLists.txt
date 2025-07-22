@@ -19,10 +19,11 @@ add_subdirectory(src/libs/market)
 add_subdirectory(src/libs/ta/logscale)
 add_subdirectory(src/libs/ta/candles)
 add_subdirectory(src/libs/ta/zigzag)
+add_subdirectory(src/libs/ta/trendlines)
 add_subdirectory(src/libs/ta/stepper)
 add_subdirectory(src/libs/ta/frames)
 add_subdirectory(src/libs/ta/volumebox)
 
 
-add_subdirectory(src/scripts/tests/test1)
+add_subdirectory(src/scripts/tests)
 add_subdirectory(src/scripts/market_anal)
