@@ -8,12 +8,13 @@
 using namespace std;
 
 class UpTrendLineZigZag {
-    private:
+    public:
         PubSub & pubsub = PubSub::getInstance();
 
         deque<Zig> lows;
         deque<Zig> highs;
         bool exists = false;
+        size_t serial_number = 0;
         size_t start_t = 0;
         double start_p = 0.0;
         double slope = 0.0;
@@ -31,6 +32,10 @@ class UpTrendLineZigZag {
 
         UpTrendLineZigZag(double delta = 0.0050, double min_threshold = 0.0001);
         void check();
+        bool is_point_inside(size_t t, double p) const;
+        bool is_point_above(size_t t, double p) const;
+        bool is_point_below(size_t t, double p) const;
+
 
 };
 

@@ -65,6 +65,7 @@ void UpTrendLineZigZag::check() {
         max_intercept += ((min_threshold * lows.front().p) - vertical_distance) / 2.0;
     }
     exists = true;
+    serial_number++;
 
     cout << "Calculating UpTrendLineZigZag with delta: " << delta << " and min_threshold: " << min_threshold << " - count lows: " << lows.size() << " - slope: " << slope << " - min_intercept: " << min_intercept << " - max_intercept: " << max_intercept << endl;
     if (slope < 0) {
@@ -152,4 +153,27 @@ void UpTrendLineZigZag::clear(string reason) {
     if (!reason.empty()) {
         cout << "Clearing UpTrendLineZigZag: " << reason << endl;
     }
+}
+
+
+bool UpTrendLineZigZag::is_point_below(size_t t, double p) const {
+    if (!exists) return false;
+    double relative_t = static_cast<double>(t - start_t) / 1000.0; // convert to seconds
+    double expected_p = slope * relative_t + start_p + min_intercept; // y = mx + b
+    return (p < expected_p);
+}
+
+bool UpTrendLineZigZag::is_point_above(size_t t, double p) const {
+    if (!exists) return false;
+    double relative_t = static_cast<double>(t - start_t) / 1000.0; // convert to seconds
+    double expected_p = slope * relative_t + start_p + max_intercept; // y = mx + b
+    return (p > expected_p);
+}
+
+bool UpTrendLineZigZag::is_point_inside(size_t t, double p) const {
+    if (!exists) return false;
+    double relative_t = static_cast<double>(t - start_t) / 1000.0; // convert to seconds
+    double expected_p_min = slope * relative_t + start_p + min_intercept; // y = mx + b
+    double expected_p_max = slope * relative_t + start_p + max_intercept; // y = mx + b
+    return (p >= expected_p_min && p <= expected_p_max);
 }

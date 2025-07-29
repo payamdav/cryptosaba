@@ -1,2 +1,2 @@
 add_executable(trendline_test trendline_test.cpp)
-target_link_libraries(trendline_test utils config pubsub trade candles zigzag up_trend_line_zigzag)
+target_link_libraries(trendline_test utils config pubsub trade candles zigzag up_trend_line_zigzag market)
