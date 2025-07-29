@@ -19,9 +19,11 @@ void test1() {
     UpTrendLineZigZag * up_trend_line = new UpTrendLineZigZag(config.get_double("trendline_zigzag"), config.get_double("trendline_threshould"));
 
     ofstream trade_file;
+    ofstream zigzag_file;
     ofstream up_trend_line_file;
 
     trade_file.open(config.files_path + "trades.bin", ios::out | ios::binary);
+    zigzag_file.open(config.files_path + "zigzag.bin", ios::out | ios::binary);
     up_trend_line_file.open(config.files_path + "up_trend_line.bin", ios::out | ios::binary);
 
     PubSub& pubsub = PubSub::getInstance();
@@ -30,6 +32,15 @@ void test1() {
         Trade* trade = static_cast<Trade*>(data);
         trade_file.write((char*)&trade->t, sizeof(trade->t));
         trade_file.write((char*)&trade->p, sizeof(trade->p));
+    });
+
+    pubsub.subscribe(up_trend_line->publish_topic + "_zigzag_append", [&zigzag_file, &up_trend_line](void* data) {
+        ZigZag * z = up_trend_line->zigzag;
+        if (z->size() > 2) {
+            auto last_1 = z->end() - 2;
+            zigzag_file.write((char*)&last_1->t, sizeof(last_1->t));
+            zigzag_file.write((char*)&last_1->p, sizeof(last_1->p));
+        }
     });
 
     pubsub.subscribe(up_trend_line->publish_topic, [&up_trend_line_file](void* data) {
@@ -41,7 +52,10 @@ void test1() {
 
     trade_reader.pubsub_trades(config.get_timestamp("datetime1"), config.get_timestamp("datetime2"));
 
+
+
     trade_file.close();
+    zigzag_file.close();
     up_trend_line_file.close();
 
 

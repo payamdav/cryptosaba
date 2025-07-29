@@ -9,7 +9,6 @@ using namespace std;
 
 class UpTrendLineZigZag {
     private:
-        ZigZag * zigzag;
         PubSub & pubsub = PubSub::getInstance();
 
         deque<Zig> lows;
@@ -24,6 +23,8 @@ class UpTrendLineZigZag {
         void clear(string reason = "");
 
     public:
+        ZigZag * zigzag;
+
         double delta;
         double min_threshold;
         string publish_topic = "up_trend_line_zigzag";

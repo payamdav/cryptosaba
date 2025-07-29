@@ -5,10 +5,10 @@
 
 UpTrendLineZigZag::UpTrendLineZigZag(double delta, double min_threshold)
     : delta(delta), min_threshold(min_threshold) {
+    publish_topic = "up_trend_line_zigzag_" + std::to_string(delta) + "_" + std::to_string(min_threshold);
     zigzag = new ZigZag(delta);
     string zigzag_update_topic = "up_trend_line_zigzag_update_" + std::to_string(delta) + "_" + std::to_string(min_threshold);
-    zigzag->set_publish_updates(zigzag_update_topic)->subscribe_to_pubsub();
-    publish_topic = "up_trend_line_zigzag_" + std::to_string(delta) + "_" + std::to_string(min_threshold);
+    zigzag->set_publish_updates(zigzag_update_topic)->set_publish_appends(publish_topic + "_zigzag_append")->subscribe_to_pubsub();
     pubsub.subscribe(zigzag_update_topic, [this](void* data) { this->check(); });
 }
 
