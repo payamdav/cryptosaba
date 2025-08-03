@@ -24,6 +24,16 @@ void UpTrendLineZigZag::check() {
         else lows.push_front(*it);
         ++it;
     }
+    if (it->h) {
+        highs.push_front(*it);
+        lows.push_front(*(it+1)); // The last point is a high, so we need to add the next point as a low
+   
+    }
+    else {
+        lows.push_front(*it);
+        highs.push_front(*(it+1)); // The last point is a low, so we need to add the next point as a high
+    }
+
     if (lows.size() < 2) {
         this->clear(); // Not enough lows to form a trend line
         return;
@@ -98,12 +108,13 @@ void UpTrendLineZigZag::clear(string reason) {
         double p_end_max = slope * (static_cast<double>(t_end - t_start) / 1000.0) + p_start_max;
         size_t count = lows.size();
         double slope = this->slope;
+        size_t serial_num = this->serial_number;
         // cout << "Publishing cleared UpTrendLineZigZag: t_start=" << t_start << ", t_end=" << t_end
         //      << ", p_start_min=" << p_start_min << ", p_start_max=" << p_start_max
         //      << ", p_end_min=" << p_end_min << ", p_end_max=" << p_end_max
         //      << ", count=" << count << ", slope=" << slope << endl;
-        // publish as binary data - 64 bytes total
-        char buffer[64];
+        // publish as binary data - 72 bytes total
+        char buffer[72];
         size_t offset = 0;
         
         // Write size_t t_start (8 bytes)
@@ -136,6 +147,11 @@ void UpTrendLineZigZag::clear(string reason) {
         
         // Write double slope (8 bytes)
         memcpy(buffer + offset, &slope, sizeof(double));
+        offset += sizeof(double);
+
+        // write serial number (8 bytes)
+        memcpy(buffer + offset, &serial_num, sizeof(size_t));
+        offset += sizeof(size_t);
         
         pubsub.publish(publish_topic, buffer);
 

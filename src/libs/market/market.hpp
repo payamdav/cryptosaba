@@ -24,6 +24,7 @@ enum class OrderDirection {
 class Order {
     public:
         size_t id = 0;
+        size_t external_id = 0; // External ID for the order, if any
         size_t request_ts = 0;
         size_t entry_ts = 0;
         size_t exit_ts = 0;
@@ -48,6 +49,8 @@ class Order {
 
         void finalize();
         void finalize(size_t exit_ts, double exit_price, ExitStatus exit_status);
+
+        char * to_buffer();
 
 };
 

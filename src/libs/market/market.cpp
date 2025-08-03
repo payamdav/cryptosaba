@@ -2,6 +2,7 @@
 #include <iostream>
 #include "../core/pubsub/pubsub.hpp"
 #include "../trade/trade.hpp"
+#include <cstring>
 
 
 using namespace std;
@@ -19,8 +20,41 @@ void Order::finalize(size_t exit_ts, double exit_price, ExitStatus exit_status) 
     finalize();
 }
 
+char * Order::to_buffer() {
+    static char buffer[12 * 8];
+    size_t offset = 0;
+    // clear buffer
+    memset(buffer, 0, sizeof(buffer));
+
+    memcpy(buffer + offset, &id, sizeof(size_t));
+    offset += sizeof(size_t);
+    memcpy(buffer + offset, &external_id, sizeof(size_t));
+    offset += sizeof(size_t);
+    memcpy(buffer + offset, &entry_ts, sizeof(size_t));
+    offset += sizeof(size_t);
+    memcpy(buffer + offset, &exit_ts, sizeof(size_t));
+    offset += sizeof(size_t);    
+    memcpy(buffer + offset, &entry_price, sizeof(double));
+    offset += sizeof(double);
+    memcpy(buffer + offset, &exit_price, sizeof(double));
+    offset += sizeof(double);
+    memcpy(buffer + offset, &sl, sizeof(double));
+    offset += sizeof(double);
+    memcpy(buffer + offset, &tp, sizeof(double));
+    offset += sizeof(double);
+    memcpy(buffer + offset, &profit, sizeof(double));
+    offset += sizeof(double);
+    memcpy(buffer + offset, &net_profit, sizeof(double));
+    offset += sizeof(double);
+    memcpy(buffer + offset, &duration, sizeof(size_t));
+    offset += sizeof(size_t);
+    size_t dir = (direction == OrderDirection::LONG) ? 0 : 1;
+    memcpy(buffer + offset, &dir, sizeof(size_t));
+    return buffer;
+}
+
 ostream & operator<<(ostream &os, const Order &order) {
-    os << "Order ID: " << order.id << ", Request TS: " << order.request_ts
+    os << "Order ID: " << order.id << ", External ID: " << order.external_id << ", Request TS: " << order.request_ts
        << ", Entry TS: " << order.entry_ts << ", Exit TS: " << order.exit_ts
        << ", Exit Status: " << static_cast<int>(order.exit_status)
        << ", Direction: " << static_cast<int>(order.direction)

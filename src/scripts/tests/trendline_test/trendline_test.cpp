@@ -48,7 +48,7 @@ void trendline_test() {
     pubsub.subscribe(up_trend_line->publish_topic, [&up_trend_line_file](void* data) {
         char* buffer = static_cast<char*>(data);
         // cout << "Received up trend line data." << endl;
-        up_trend_line_file.write(buffer, 64); // Write 64 bytes of the trend line data
+        up_trend_line_file.write(buffer, 72); // Write 72 bytes of the trend line data
     });
 
 
@@ -61,7 +61,7 @@ void trendline_test() {
     up_trend_line_file.close();
 
 
-    cout << "All finished reading trades." << endl;
+    std::cout << "All finished reading trades." << endl;
 }
 
 
@@ -79,6 +79,7 @@ void up_trendline_long_test() {
     ofstream trade_zigzag_file;
     ofstream up_trend_line_file;
     ofstream long_entry_points_file;
+    ofstream orders_file;
 
 
     trade_file.open(config.files_path + "trades.bin", ios::out | ios::binary);
@@ -86,6 +87,7 @@ void up_trendline_long_test() {
     trade_zigzag_file.open(config.files_path + "trades_zigzag.bin", ios::out | ios::binary);
     up_trend_line_file.open(config.files_path + "up_trend_line.bin", ios::out | ios::binary);
     long_entry_points_file.open(config.files_path + "long_entry_points.bin", ios::out | ios::binary);
+    orders_file.open(config.files_path + "orders.bin", ios::out | ios::binary);
 
 
     pubsub.subscribe("trades_zigzag_append", [&trades_zigzag, &up_trend_line, &long_entry_points_file, &trade_zigzag_file, &market1](void* data) {
@@ -103,14 +105,16 @@ void up_trendline_long_test() {
         // if (!up_trend_line->is_point_above(last->t, last->p)) return; // Only consider points above the trend line
         if (up_trend_line->is_point_inside(last_1->t, last_1->p)) {
             last_serial_number = up_trend_line->serial_number;
-            cout << "Good for long: t=" << last_1->t << ", p=" << last_1->p << endl;
-            long_entry_points_file.write((char*)&last_1->t, sizeof(last->t));
-            long_entry_points_file.write((char*)&last_1->p, sizeof(last->p));
+            std::cout << "Good for long: t=" << last_1->t << ", p=" << last_1->p << endl;
 
             // create an order on market1
             Order * order = market1->market_order(OrderDirection::LONG);
+            order->external_id = last_serial_number;
             order->sl = up_trend_line->lows.back().p;
-            order->tp = last->p * 1.0020; // 0.2% profit target
+            order->tp = order->entry_price + (order->entry_price - order->sl) * 2; // Set TP to 2x SL distance
+
+            long_entry_points_file.write((char*)&order->entry_ts, sizeof(order->entry_ts));
+            long_entry_points_file.write((char*)&order->entry_price, sizeof(order->entry_price));
 
         }
     });
@@ -134,11 +138,14 @@ void up_trendline_long_test() {
     pubsub.subscribe(up_trend_line->publish_topic, [&up_trend_line_file](void* data) {
         char* buffer = static_cast<char*>(data);
         // cout << "Received up trend line data." << endl;
-        up_trend_line_file.write(buffer, 64); // Write 64 bytes of the trend line data
+        up_trend_line_file.write(buffer, 72); // Write 72 bytes of the trend line data
     });
 
 
     trade_reader.pubsub_trades(config.get_timestamp("datetime1"), config.get_timestamp("datetime2"));
+    for (auto o : market1->completed_orders) {
+        orders_file.write(o.to_buffer(), 12 * 8); // Write 96 bytes of the order data
+    }
 
 
 
@@ -147,11 +154,12 @@ void up_trendline_long_test() {
     trade_zigzag_file.close();
     up_trend_line_file.close();
     long_entry_points_file.close();
+    orders_file.close();
 
     MarketReport report = market1->report();
-    cout << "Market Report: " << endl << report << endl;
+    std::cout << "Market Report: " << endl << report << endl;
 
-    cout << "All finished reading trades." << endl;
+    std::cout << "All finished reading trades." << endl;
 }
 
 
