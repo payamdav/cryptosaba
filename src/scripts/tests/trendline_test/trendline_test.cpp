@@ -5,6 +5,7 @@
 #include "../../../libs/core/config/config.hpp"
 #include "../../../libs/core/pubsub/pubsub.hpp"
 #include "../../../libs/trade/trade.hpp"
+#include "../../../libs/trade/tradecache.hpp"
 #include "../../../libs/ta/candles/candles.hpp"
 #include "../../../libs/ta/zigzag/zigzag.hpp"
 #include "../../../libs/ta/trendlines/up_trend_line_zigzag/up_trend_line_zigzag.hpp"
@@ -14,7 +15,7 @@
 using namespace std;
 
 
-void trendline_test() {
+void up_trendline_test() {
     Config & config = Config::getInstance();
     string symbol = config.get("symbol");
     TradeReader trade_reader(symbol);
@@ -162,11 +163,126 @@ void up_trendline_long_test() {
     std::cout << "All finished reading trades." << endl;
 }
 
+void trendline_test() {
+    Config & config = Config::getInstance();
+    PubSub& pubsub = PubSub::getInstance();
+    TradeCacheSimple & trade_cache_simple = TradeCacheSimple::getInstance();
+    trade_cache_simple.subscribe_to_pubsub();
+    string symbol = config.get("symbol");
+    TradeReader trade_reader(symbol);
+    TrendLineZigZagEnhancedTradeRegression * trendline = new TrendLineZigZagEnhancedTradeRegression(
+        config.get_double("trendline_zigzag"), 
+        config.get_double("trendline_threshould") 
+    );
+    ZigZag * trades_zigzag = (new ZigZag(config.get_double("trades_zigzag"), 10))->set_publish_appends("trades_zigzag_append")->subscribe_to_pubsub();
+    Market * market1 = (new Market("Market1"))->set_price_multiplier_to_handle_orders(0.0001)->set_commision(10)->subscribe_to_pubsub();
+
+    double tp_multiplier = config.get_double("tp_multiplier");
+
+    ofstream trade_file;
+    ofstream zigzag_file;
+    ofstream trade_zigzag_file;
+    ofstream trend_line_file;
+    ofstream orders_file;
+
+
+    trade_file.open(config.files_path + "trades.bin", ios::out | ios::binary);
+    zigzag_file.open(config.files_path + "zigzag.bin", ios::out | ios::binary);
+    trade_zigzag_file.open(config.files_path + "trades_zigzag.bin", ios::out | ios::binary);
+    trend_line_file.open(config.files_path + "trend_line.bin", ios::out | ios::binary);
+    orders_file.open(config.files_path + "orders.bin", ios::out | ios::binary);
+
+
+    pubsub.subscribe("trades_zigzag_append", [&trades_zigzag, &trendline, &trade_zigzag_file, &market1, &tp_multiplier](void* data) {
+        static size_t last_serial_number = 0;
+        if (trades_zigzag->size() < 2) return;
+        auto last = trades_zigzag->end() - 1;
+        auto last_1 = trades_zigzag->end() - 2;
+        // writing zigzag to file
+        trade_zigzag_file.write((char*)&last_1->t, sizeof(last_1->t));
+        trade_zigzag_file.write((char*)&last_1->p, sizeof(last_1->p));
+
+        if (last_serial_number == trendline->serial_number) return; // No new trend line
+
+        if (trendline->is_point_inside(last_1->t, last_1->p)) {
+            last_serial_number = trendline->serial_number;
+            if (last->h) {
+                std::cout << "Good for long: t=" << last_1->t << ", p=" << last_1->p << endl;
+
+                // create an order on market1
+                Order * order = market1->market_order(OrderDirection::LONG);
+                order->external_id = last_serial_number;
+                order->sl = trendline->lows.back().p;
+                // order->tp = order->entry_price + (order->entry_price - order->sl) * 2; // Set TP to 2x SL distance
+                order->tp = order->entry_price * (1 + tp_multiplier); // Set TP to multiplier of SL distance
+
+            }
+            else {
+                return;
+                std::cout << "Good for short: t=" << last_1->t << ", p=" << last_1->p << endl;
+
+                // create an order on market1
+                Order * order = market1->market_order(OrderDirection::SHORT);
+                order->external_id = last_serial_number;
+                order->sl = trendline->highs.back().p;
+                // order->tp = order->entry_price - (order->sl - order->entry_price) * 2; // Set TP to 2x SL distance
+                order->tp = order->entry_price * (1 - tp_multiplier); // Set TP to multiplier of SL distance
+
+            }
+
+
+
+        }
+    });
+
+
+    pubsub.subscribe("trade", [&trade_file](void* data) {
+        Trade* trade = static_cast<Trade*>(data);
+        trade_file.write((char*)&trade->t, sizeof(trade->t));
+        trade_file.write((char*)&trade->p, sizeof(trade->p));
+    });
+
+    pubsub.subscribe(trendline->publish_topic + "_zigzag_append", [&zigzag_file, &trendline](void* data) {
+        ZigZagEnhanced * z = trendline->zigzag;
+        if (z->size() > 2) {
+            auto last_1 = z->end() - 2;
+            zigzag_file.write((char*)&last_1->t, sizeof(last_1->t));
+            zigzag_file.write((char*)&last_1->p, sizeof(last_1->p));
+        }
+    });
+
+    pubsub.subscribe(trendline->publish_topic, [&trend_line_file](void* data) {
+        char* buffer = static_cast<char*>(data);
+        // cout << "Received up trend line data." << endl;
+        trend_line_file.write(buffer, 72); // Write 72 bytes of the trend line data
+    });
+
+
+    trade_reader.pubsub_trades(config.get_timestamp("datetime1"), config.get_timestamp("datetime2"));
+    for (auto o : market1->completed_orders) {
+        orders_file.write(o.to_buffer(), 12 * 8); // Write 96 bytes of the order data
+    }
+
+
+
+    trade_file.close();
+    zigzag_file.close();
+    trade_zigzag_file.close();
+    trend_line_file.close();
+    orders_file.close();
+
+    MarketReport report = market1->report();
+    std::cout << "Market Report: " << endl << report << endl;
+
+    std::cout << "All finished reading trades." << endl;
+}
+
 
 
 int main() {
     // trendline_test();
-    up_trendline_long_test();
+    // up_trendline_long_test();
+    trendline_test();
     return 0;
 }
 

@@ -121,3 +121,136 @@ void ZigZag::push(size_t t, double p) {
         }
     }
 }
+
+
+// ZigTradeCache Implementation
+
+ZigTradeCache::ZigTradeCache(size_t t, double p, bool h)
+    : t(t), p(p), h(h) {
+}
+
+ZigTradeCache::ZigTradeCache(size_t t, double p, bool h, TradeCacheSimple::iterator it)
+    : t(t), p(p), h(h), it(it) {
+}
+
+std::ostream& operator<<(std::ostream& os, const ZigTradeCache& zig) {
+    os << "ZigTradeCache: t=" << zig.t << ", p=" << zig.p << ", h=" << (zig.h ? "true" : "false");
+    return os;
+}
+
+// ZigZagEnhanced Implementation
+
+ZigZagEnhanced::ZigZagEnhanced(double delta_h, double delta_l, size_t retain_size)
+    : boost::circular_buffer<ZigTradeCache>(retain_size), dh(delta_h), dl(delta_l), pubsub(PubSub::getInstance()), trade_cache(TradeCacheSimple::getInstance()) {
+
+}
+
+ZigZagEnhanced::ZigZagEnhanced(double delta, size_t retain_size)
+    : boost::circular_buffer<ZigTradeCache>(retain_size), dh(delta), dl(delta), pubsub(PubSub::getInstance()), trade_cache(TradeCacheSimple::getInstance()) {
+}
+
+void ZigZagEnhanced::push(size_t t, double p) {
+    update_in_last_push = false;
+    append_in_last_push = false;
+
+    if (empty()) {
+        if (first_low.t == 0) {
+            first_low.t = t;
+            first_low.p = p;
+            first_low.it = trade_cache.last_trade_iterator();
+        }
+        if (first_high.t == 0) {
+            first_high.t = t;
+            first_high.p = p;
+            first_high.it = trade_cache.last_trade_iterator();
+        }
+        if (p > first_high.p) {
+            first_high.t = t;
+            first_high.p = p;
+            first_high.it = trade_cache.last_trade_iterator();
+        }
+        if (p < first_low.p) {
+            first_low.t = t;
+            first_low.p = p;
+            first_low.it = trade_cache.last_trade_iterator();
+        }
+        if (first_low.t < first_high.t) {
+            if (first_high.p > first_low.p * (1 + dh)) {
+                push_back(first_low);
+                push_back(first_high);
+                append_in_last_push = true;
+                if (publish_appends) {
+                    pubsub.publish(topic_appends, nullptr);
+                }
+            }
+        }
+        else {
+            if (first_low.p < first_high.p * (1 - dl)) {
+                push_back(first_high);
+                push_back(first_low);
+                append_in_last_push = true;
+                if (publish_appends) {
+                    pubsub.publish(topic_appends, nullptr);
+                }
+            }
+        }
+    }
+    else {
+        ZigTradeCache & last = back();
+        if (last.h) {
+            if (p > last.p) {
+                last.t = t;
+                last.p = p;
+                last.it = trade_cache.last_trade_iterator();
+                update_in_last_push = true;
+                if (publish_updates) {
+                    pubsub.publish(topic_updates, nullptr);
+                }
+            } else if (p < last.p * (1 - dl)) {
+                push_back(ZigTradeCache(t, p, false, trade_cache.last_trade_iterator()));
+                append_in_last_push = true;
+                if (publish_appends) {
+                    pubsub.publish(topic_appends, nullptr);
+                }
+            }
+        } else {
+            if (p < last.p) {
+                last.t = t;
+                last.p = p;
+                last.it = trade_cache.last_trade_iterator();
+                update_in_last_push = true;
+                if (publish_updates) {
+                    pubsub.publish(topic_updates, nullptr);
+                }
+            } else if (p > last.p * (1 + dh)) {
+                push_back(ZigTradeCache(t, p, true, trade_cache.last_trade_iterator()));
+                append_in_last_push = true;
+                if (publish_appends) {
+                    pubsub.publish(topic_appends, nullptr);
+                }
+            }
+        }
+    }
+
+}
+
+ZigZagEnhanced * ZigZagEnhanced::subscribe_to_pubsub() {
+    pubsub.subscribe("trade_cache_simple", [this](void* data) { 
+        Trade* trade = static_cast<Trade*>(data);
+        this->push(trade->t, trade->p);
+    });
+    return this;
+}
+
+ZigZagEnhanced * ZigZagEnhanced::set_publish_appends(std::string topic) {
+    publish_appends = true;
+    topic_appends = topic;
+    return this;
+}
+
+ZigZagEnhanced * ZigZagEnhanced::set_publish_updates(std::string topic) {
+    publish_updates = true;
+    topic_updates = topic;
+    return this;
+}
+

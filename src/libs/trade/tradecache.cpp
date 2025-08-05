@@ -302,3 +302,31 @@ void TradeCache2::print_average_counts() {
         std::cout << "Index " << milis[i] << ": " << average_count(indexes[i]) << std::endl;
     }
 }
+
+
+// TradeCacheSimple Implementation
+
+TradeCacheSimple::TradeCacheSimple(size_t size) : boost::circular_buffer<Trade>(size) {
+
+}
+
+TradeCacheSimple& TradeCacheSimple::getInstance() {
+    static TradeCacheSimple instance;
+    return instance;
+}
+
+void TradeCacheSimple::subscribe_to_pubsub() {
+    pubsub.subscribe("trade", [this](void* data) { Trade* trade = static_cast<Trade*>(data); this->push(*trade); });
+}
+
+void TradeCacheSimple::push(Trade& trade) {
+    this->push_back(trade);
+    pubsub.publish("trade_cache_simple", &trade);
+}
+
+boost::circular_buffer<Trade>::iterator TradeCacheSimple::last_trade_iterator() {
+    if (this->empty()) {
+        throw std::runtime_error("No trades in cache");
+    }
+    return this->end() - 1;
+}

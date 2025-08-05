@@ -86,3 +86,25 @@ class TradeCache2 {
         size_t average_count(boost::circular_buffer<boost::circular_buffer<Trade>::iterator> & buf);
         void print_average_counts();
 };
+
+
+class TradeCacheSimple : public boost::circular_buffer<Trade> {
+    private:
+        PubSub& pubsub = PubSub::getInstance();
+
+        TradeCacheSimple(size_t size=10000000);
+        TradeCacheSimple(const TradeCacheSimple&) = delete;
+        TradeCacheSimple& operator=(const TradeCacheSimple&) = delete;
+        TradeCacheSimple(TradeCacheSimple&&) = delete;
+        TradeCacheSimple& operator=(TradeCacheSimple&&) = delete;
+
+    public:
+
+        static TradeCacheSimple& getInstance();
+        void subscribe_to_pubsub();
+        void push(Trade& trade);
+
+        // method to return iterator to the last trade
+        boost::circular_buffer<Trade>::iterator last_trade_iterator();
+};
+
