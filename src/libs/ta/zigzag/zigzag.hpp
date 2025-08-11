@@ -64,8 +64,6 @@ class ZigZagEnhanced : public boost::circular_buffer<ZigTradeCache> {
         ZigTradeCache first_high = {0, 0, true};
         bool publish_appends = false;
         bool publish_updates = false;
-        std::string topic_appends = "zigzag_append";
-        std::string topic_updates = "zigzag_update";
         PubSub & pubsub;
         TradeCacheSimple & trade_cache;
     public:
@@ -74,6 +72,8 @@ class ZigZagEnhanced : public boost::circular_buffer<ZigTradeCache> {
 
         bool update_in_last_push = false;
         bool append_in_last_push = false;
+        std::string topic_appends = "zigzag_append";
+        std::string topic_updates = "zigzag_update";
 
         ZigZagEnhanced(double delta, size_t retain_size = 1000);
         ZigZagEnhanced(double delta_h, double delta_l, size_t retain_size = 1000);

@@ -87,3 +87,41 @@ class TrendLineZigZagEnhancedTradeRegression {
 
 };
 
+
+class TrendLineUp2Points{
+    public:
+        PubSub & pubsub = PubSub::getInstance();
+        TradeCacheSimple & trade_cache = TradeCacheSimple::getInstance();
+
+        bool exists = false;
+        size_t serial_number = 0;
+        size_t start_t = 0;
+        double start_p = 0.0;
+        double slope = 0.0;
+        double min_intercept = 0.0;
+        double max_intercept = 0.0;
+        
+        void clear();
+        void publish_current();
+
+    public:
+        ZigZagEnhanced * zigzag;
+
+        double dh;
+        double dl;
+        double threshold;
+        string publish_topic = "trend_line_zigzag_trade_regression";
+
+        TrendLineUp2Points(double delta, double threshold);
+        TrendLineUp2Points(double delta_h, double delta_l, double threshold);
+        ~TrendLineUp2Points();
+
+        void check();
+
+        bool is_point_inside(size_t t, double p) const;
+        bool is_point_above(size_t t, double p) const;
+        bool is_point_below(size_t t, double p) const;
+
+
+};
+

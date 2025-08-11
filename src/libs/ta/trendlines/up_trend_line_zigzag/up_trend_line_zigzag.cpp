@@ -1,5 +1,6 @@
 #include "up_trend_line_zigzag.hpp"
 #include <string>
+#include "../../../utils/random_utils.hpp"
 
 
 
@@ -446,3 +447,109 @@ bool TrendLineZigZagEnhancedTradeRegression::is_point_inside(size_t t, double p)
     return (p >= expected_p_min && p <= expected_p_max);
 }
 
+
+
+// TrendLine2Points Implementation
+TrendLineUp2Points::TrendLineUp2Points(double delta_h, double delta_l, double threshold) 
+    : dh(delta_h), dl(delta_l), threshold(threshold) {
+    zigzag = (new ZigZagEnhanced(delta_h, delta_l))->set_publish_appends(utils::random_string())->set_publish_updates(utils::random_string())->subscribe_to_pubsub();
+    pubsub.subscribe(zigzag->topic_updates, [this](void* data) { this->check();});
+    this->publish_topic = utils::random_string();
+}
+
+TrendLineUp2Points::TrendLineUp2Points(double delta, double threshold) 
+    : TrendLineUp2Points(delta, delta, threshold) {
+}
+
+TrendLineUp2Points::~TrendLineUp2Points() {
+    delete zigzag;
+}
+
+void TrendLineUp2Points::check() {
+    if (zigzag->size() < 5) return; // Not enough data to form a trend line
+    auto it = zigzag->rbegin();
+    if (this->exists && (this->start_t != (it + 3)->t && this->start_t != (it + 4)->t )) this->clear();
+    if (!(it->h)) return; // Last point must be a high to form an up trend line
+    if (this->exists) return; // already exists
+    if ((it)->p > (it + 2)->p && (it+1)->p > (it+3)->p) {
+        this->start_t = (it + 3)->t;
+        this->start_p = (it + 3)->p;
+        this->slope = (((it + 1)->p - (it + 3)->p) / ((it + 1)->t - (it + 3)->t)) * 1000; // slope based on 1000ms (1sec)
+        this->min_intercept = 0;
+        this->max_intercept = start_p * this->threshold;
+        this->exists = true;
+        this->serial_number++;
+    }
+}
+
+void TrendLineUp2Points::clear() {
+    if (exists) this->publish_current();
+    this->exists = false;
+    this->start_t = 0;
+    this->start_p = 0;
+    this->slope = 0;
+    this->min_intercept = 0;
+    this->max_intercept = 0;
+}
+
+void TrendLineUp2Points::publish_current() {
+    if (!exists) return;
+    size_t t_start = start_t;
+    size_t t_end = zigzag->back().t;
+    double p_start_min = start_p + min_intercept;
+    double p_start_max = start_p + max_intercept;
+    double p_end_min = slope * (static_cast<double>(t_end - t_start) / 1000.0) + p_start_min;
+    double p_end_max = slope * (static_cast<double>(t_end - t_start) / 1000.0) + p_start_max;
+
+    // publish as binary data - 48 bytes total
+    char buffer[48];
+    size_t offset = 0;
+
+    // Write size_t t_start (8 bytes)
+    memcpy(buffer + offset, &t_start, sizeof(size_t));
+    offset += sizeof(size_t);
+
+    // Write size_t t_end (8 bytes)
+    memcpy(buffer + offset, &t_end, sizeof(size_t));
+    offset += sizeof(size_t);
+
+    // Write double p_start_min (8 bytes)
+    memcpy(buffer + offset, &p_start_min, sizeof(double));
+    offset += sizeof(double);
+
+    // Write double p_start_max (8 bytes)
+    memcpy(buffer + offset, &p_start_max, sizeof(double));
+    offset += sizeof(double);
+
+    // Write double p_end_min (8 bytes)
+    memcpy(buffer + offset, &p_end_min, sizeof(double));
+    offset += sizeof(double);
+
+    // Write double p_end_max (8 bytes)
+    memcpy(buffer + offset, &p_end_max, sizeof(double));
+    
+    pubsub.publish(publish_topic, buffer);
+}
+
+bool TrendLineUp2Points::is_point_below(size_t t, double p) const {
+    if (!exists) return false;
+    double relative_t = static_cast<double>(t - start_t) / 1000.0; // convert to seconds
+    double expected_p = slope * relative_t + start_p + min_intercept; // y = mx + b
+    return (p < expected_p);
+}
+
+
+bool TrendLineUp2Points::is_point_above(size_t t, double p) const {
+    if (!exists) return false;
+    double relative_t = static_cast<double>(t - start_t) / 1000.0; // convert to seconds
+    double expected_p = slope * relative_t + start_p + max_intercept; // y = mx + b
+    return (p > expected_p);
+}
+
+bool TrendLineUp2Points::is_point_inside(size_t t, double p) const {
+    if (!exists) return false;
+    double relative_t = static_cast<double>(t - start_t) / 1000.0; // convert to seconds
+    double expected_p_min = slope * relative_t + start_p + min_intercept; // y = mx + b
+    double expected_p_max = slope * relative_t + start_p + max_intercept; // y = mx + b
+    return (p > expected_p_min && p < expected_p_max);
+}
