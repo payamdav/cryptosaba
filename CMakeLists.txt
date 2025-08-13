@@ -10,6 +10,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
 project(cryptosaba)
 
+# using Eigen
+find_package(Eigen3 3.4 CONFIG REQUIRED)
+
 add_subdirectory(src/libs/utils)
 add_subdirectory(src/libs/core/config)
 add_subdirectory(src/libs/core/pubsub)
