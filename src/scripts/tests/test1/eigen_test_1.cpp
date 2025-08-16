@@ -27,15 +27,10 @@ void eigen_map_over_vector_struct_test() {
         {5.0, 6.0}
     };
 
-    // create a  1 * 3 Map of points that grabs only x from points - so it requires using stride with size of Point
-    typedef Eigen::Stride<sizeof(Point)/sizeof(double), 2> PointStride;
-    Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, 1, Eigen::ColMajor>, 0, PointStride> map_x(
-        reinterpret_cast<const double*>(&points[0].x),
-        points.size(),
-        1,
-        PointStride(sizeof(Point)/sizeof(double), 1)
-    );
-
+    // Eigen::Map<MatrixXd, Eigen::AlignmentType::Unaligned, Eigen::Stride<0, 2>> map_x(reinterpret_cast<double*>(points.data()), points.size(), 1);
+    // Eigen::Map<MatrixXd, Eigen::AlignmentType::Aligned, Eigen::Stride<0, 2>> map_x(reinterpret_cast<double*>(points.data()), points.size(), 1);
+    // Eigen::Map<MatrixXd, Eigen::AlignmentType::Aligned, Eigen::Stride<0, 2>> map_x(&points[0].y, points.size(), 1);
+    Eigen::Map<VectorXd, 0, Stride<0, 2>> map_x(&points[0].x, points.size());
     std::cout << map_x << std::endl;
 }
 

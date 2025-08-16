@@ -26,6 +26,7 @@ add_subdirectory(src/libs/ta/trendlines)
 add_subdirectory(src/libs/ta/stepper)
 add_subdirectory(src/libs/ta/frames)
 add_subdirectory(src/libs/ta/volumebox)
+add_subdirectory(src/libs/ta/linear_regression)
 
 
 add_subdirectory(src/scripts/tests)
