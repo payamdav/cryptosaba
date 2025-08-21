@@ -18,6 +18,7 @@ add_subdirectory(src/libs/core/config)
 add_subdirectory(src/libs/core/pubsub)
 add_subdirectory(src/libs/trade)
 add_subdirectory(src/libs/market)
+add_subdirectory(src/libs/statistics)
 
 add_subdirectory(src/libs/ta/logscale)
 add_subdirectory(src/libs/ta/candles)
@@ -27,7 +28,7 @@ add_subdirectory(src/libs/ta/stepper)
 add_subdirectory(src/libs/ta/frames)
 add_subdirectory(src/libs/ta/volumebox)
 add_subdirectory(src/libs/ta/linear_regression)
-
+add_subdirectory(src/libs/ta/vnode)
 
 add_subdirectory(src/scripts/tests)
 add_subdirectory(src/scripts/market_anal)
