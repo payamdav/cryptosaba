@@ -32,3 +32,5 @@ cmake_install.cmake
 CMakeUserPresets.json
 
 config.conf
+.cache/
+

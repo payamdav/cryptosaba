@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../statistics/live_stats.hpp"
+// #include "../../statistics/live_stats.hpp"
 
 
 // Vnode class subscribes to candles that provided to it as candle pointer. 

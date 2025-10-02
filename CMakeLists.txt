@@ -28,7 +28,7 @@ add_subdirectory(src/libs/ta/stepper)
 add_subdirectory(src/libs/ta/frames)
 add_subdirectory(src/libs/ta/volumebox)
 add_subdirectory(src/libs/ta/linear_regression)
-add_subdirectory(src/libs/ta/vnode)
+# add_subdirectory(src/libs/ta/vnode)
 
 add_subdirectory(src/scripts/tests)
 add_subdirectory(src/scripts/market_anal)

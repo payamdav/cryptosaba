@@ -2,7 +2,6 @@
 #include "../../core/pubsub/pubsub.hpp"
 #include <boost/circular_buffer.hpp>
 #include "../../ta/frames/frames.hpp"
-#include <iostream>
 #include <string>
 
 class Vols {
