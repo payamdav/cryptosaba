@@ -5,7 +5,6 @@
 #include "../../../libs/core/pubsub/pubsub.hpp"
 #include "../../../libs/trade/trade.hpp"
 #include "../../../libs/ta/candles/candles.hpp"
-#include "../../../libs/ta/zigzag/zigzag.hpp"
 
 
 using namespace std;

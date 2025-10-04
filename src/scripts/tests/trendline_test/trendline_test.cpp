@@ -5,7 +5,6 @@
 #include "../../../libs/core/pubsub/pubsub.hpp"
 #include "../../../libs/trade/trade.hpp"
 #include "../../../libs/trade/tradecache.hpp"
-#include "../../../libs/ta/candles/candles.hpp"
 #include "../../../libs/ta/zigzag/zigzag.hpp"
 #include "../../../libs/ta/trendlines/up_trend_line_zigzag/up_trend_line_zigzag.hpp"
 #include "../../../libs/market/market.hpp"
