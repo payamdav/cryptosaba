@@ -5,13 +5,15 @@ set(LANGUAGE CXX)
 set(CMAKE_BUILD_PARALLEL_LEVEL 4)
 set(CMAKE_GENERATOR "Ninja")
 set(CMAKE_LINKER_TYPE LLD)
+# tel cmake that LLD is lld-21
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=lld-21")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
 
 project(cryptosaba)
 
 # using Eigen
-find_package(Eigen3 3.4 CONFIG REQUIRED)
+# find_package(Eigen3 3.4 CONFIG REQUIRED)
 
 add_subdirectory(src/libs/utils)
 add_subdirectory(src/libs/core/config)

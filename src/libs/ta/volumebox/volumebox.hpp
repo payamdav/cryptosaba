@@ -3,6 +3,9 @@
 #include <boost/circular_buffer.hpp>
 #include "../../ta/frames/frames.hpp"
 #include <string>
+#include <vector>
+
+using namespace std;
 
 class Vols {
     public:

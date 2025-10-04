@@ -1,6 +1,5 @@
 #pragma once
 #include "../../core/pubsub/pubsub.hpp"
-#include "../../trade/trade.hpp"
 #include "../../trade/tradecache.hpp"
 #include <boost/circular_buffer.hpp>
 #include <iostream>

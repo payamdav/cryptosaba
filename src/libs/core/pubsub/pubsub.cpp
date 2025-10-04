@@ -1,5 +1,4 @@
 #include "pubsub.hpp"
-#include <iostream>
 
 
 PubSub& PubSub::getInstance() {
