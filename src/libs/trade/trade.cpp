@@ -121,3 +121,49 @@ void TradeReader::pubsub_trades(size_t t1, size_t t2) {
     // cout << "Published trades from index " << start_index << " to " << end_index << endl;
     pubsub.publish("trade_finished", nullptr); // Publish a null trade to indicate the end of the stream
 }
+
+vector<Trade> TradeReader::read_by_ts_to_vector(size_t t1, size_t t2) {
+    vector<Trade> trades;
+    size_t start_index = t1 == 0 ? 0 : search(t1); // Find the starting index for the given timestamp
+    size_t end_index = t2 == 0 ? count - 1 : search(t2); // Find the ending index for the given timestamp
+    Trade trade;
+    set_file_cursor(start_index); // Set the file cursor to the starting index
+    size_t trade_count = end_index - start_index + 1; // Calculate the number of trades to read
+    while (trade_count--) {
+        next(trade); // Read the next trade
+        trades.push_back(trade); // Add the trade to the vector
+    }
+    return trades; // Return the vector of trades
+}
+
+// utilities related to trades
+
+void write_trades_to_bin_file(string file_path_name, const vector<Trade>& trades) {
+    ofstream trade_data(file_path_name, ios::out | ios::binary); // Open the binary file for writing
+    if (!trade_data.is_open()) {
+        cout << "Error: Could not open file for writing trades: " << file_path_name << endl;
+        return; // Return early if the file cannot be opened
+    }
+    for (const auto& trade : trades) {
+        // write fields one by one in binary format
+        trade_data.write(reinterpret_cast<const char*>(&trade.p), sizeof(trade.p));
+        trade_data.write(reinterpret_cast<const char*>(&trade.v), sizeof(trade.v));
+        trade_data.write(reinterpret_cast<const char*>(&trade.q), sizeof(trade.q));
+        trade_data.write(reinterpret_cast<const char*>(&trade.t), sizeof(trade.t));
+    }
+    trade_data.close(); // Close the file after writing
+}
+
+void write_trades_to_bin_file_price_ts(string file_path_name, const vector<Trade>& trades) {
+    ofstream trade_data(file_path_name, ios::out | ios::binary); // Open the binary file for writing
+    if (!trade_data.is_open()) {
+        cout << "Error: Could not open file for writing trades: " << file_path_name << endl;
+        return; // Return early if the file cannot be opened
+    }
+    for (const auto& trade : trades) {
+        // write only price and timestamp fields in binary format
+        trade_data.write(reinterpret_cast<const char*>(&trade.t), sizeof(trade.t));
+        trade_data.write(reinterpret_cast<const char*>(&trade.p), sizeof(trade.p));
+    }
+    trade_data.close(); // Close the file after writing
+}

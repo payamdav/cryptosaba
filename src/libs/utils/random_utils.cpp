@@ -24,6 +24,13 @@ namespace utils {
         return dis(gen);
     }
 
+    size_t random_size_t(size_t min, size_t max) {
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        static std::uniform_int_distribution<size_t> dis(min, max);
+        return dis(gen);
+    }
+
     string random_string() {
         return to_string(random_double());
     }

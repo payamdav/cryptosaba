@@ -1,6 +1,6 @@
 #include "candles.hpp"
 #include <iostream>
-
+#include <cstdlib> 
 
 std::ostream& operator<<(std::ostream& os, const Candle& candle) {
     os << "Candle(t=" << candle.t << ", o=" << candle.o << ", h=" << candle.h << ", l=" << candle.l << ", c=" << candle.c << ", vwap=" << candle.vwap << ", n=" << candle.n << ", v=" << candle.v << ", vs=" << candle.vs << ", vb=" << candle.vb << ", q=" << candle.q << ")";
@@ -170,4 +170,74 @@ void Candles::push(const Trade& trade) {
         this->pubsub.publish(this->topic_candles_on_new_candle, (void*)&this->back());
         this->push_back(Candle(trade, this->sec));
     }
+}
+
+// CandlesVector methods
+
+void CandlesVector::push(const Candle& candle) {
+    if (this->empty()) {
+        this->emplace_back(Candle(candle, this->sec));
+    }
+    else if (this->back().is_time_before_candle(candle.t)) {
+        std::cerr << "Error: New candle time is before the last candle time." << std::endl;
+    }
+    else if (this->back().is_time_in_candle(candle.t, this->sec)) {
+        this->back().push(candle, this->sec);
+    }
+    else {
+        // fill gaps with empty candles
+        while (!(this->back().is_time_next_candle(candle.t, this->sec))) {
+            this->emplace_back(this->back().filling_candle(this->sec));
+        }
+        this->emplace_back(Candle(candle, this->sec));
+    }
+}
+
+void CandlesVector::push(const Trade& trade) {
+    if (this->empty()) {
+        this->emplace_back(Candle(trade, this->sec));
+    }
+    else if (this->back().is_time_before_candle(trade.t)) {
+        std::cerr << "Error: New trade time is before the last candle time." << std::endl;
+    }
+    else if (this->back().is_time_in_candle(trade.t, this->sec)) {
+        this->back().push(trade, this->sec);
+    }
+    else {
+        // fill gaps with empty candles
+        while (!(this->back().is_time_next_candle(trade.t, this->sec))) {
+            this->emplace_back(this->back().filling_candle(this->sec));
+        }
+        this->emplace_back(Candle(trade, this->sec));
+    }
+}
+
+void CandlesVector::build_from_trade_vector(const std::vector<Trade>& trades) {
+    for (const auto& trade : trades) {
+        this->push(trade);
+    }
+}
+
+
+void CandlesVector::write_to_binary_file(const std::string& file_path_name) {
+    std::ofstream candle_data(file_path_name, std::ios::out | std::ios::binary); // Open the binary file for writing
+    if (!candle_data.is_open()) {
+        std::cout << "Error: Could not open file for writing candles: " << file_path_name << std::endl;
+        return; // Return early if the file cannot be opened
+    }
+    for (const auto& candle : *this) {
+        // write fields one by one to ensure no padding issues
+        candle_data.write(reinterpret_cast<const char*>(&candle.t), sizeof(candle.t));
+        candle_data.write(reinterpret_cast<const char*>(&candle.o), sizeof(candle.o));
+        candle_data.write(reinterpret_cast<const char*>(&candle.h), sizeof(candle.h));
+        candle_data.write(reinterpret_cast<const char*>(&candle.l), sizeof(candle.l));
+        candle_data.write(reinterpret_cast<const char*>(&candle.c), sizeof(candle.c));
+        candle_data.write(reinterpret_cast<const char*>(&candle.vwap), sizeof(candle.vwap));
+        candle_data.write(reinterpret_cast<const char*>(&candle.n), sizeof(candle.n));
+        candle_data.write(reinterpret_cast<const char*>(&candle.v), sizeof(candle.v));
+        candle_data.write(reinterpret_cast<const char*>(&candle.vs), sizeof(candle.vs));
+        candle_data.write(reinterpret_cast<const char*>(&candle.vb), sizeof(candle.vb));
+        candle_data.write(reinterpret_cast<const char*>(&candle.q), sizeof(candle.q));
+    }
+    candle_data.close(); // Close the file after writing
 }

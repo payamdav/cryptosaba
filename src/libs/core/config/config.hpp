@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #include <unordered_map>
 #include <vector>
 #include <string>
@@ -29,6 +30,7 @@ class Config {
         string get(const string& key);
         long long get_int(const string& key);
         double get_double(const string& key);
+        std::size_t get_size_t(const string& key);
         long long get_timestamp(const string& key);
         std::string get_path(const string& key);
         std::vector<std::string> get_csv_strings(const string& key);

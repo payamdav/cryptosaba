@@ -87,6 +87,15 @@ double Config::get_double(const string& key) {
     }
 }
 
+std::size_t Config::get_size_t(const string& key) {
+    if (exist(key)) {
+        return static_cast<std::size_t>(stoull(kv[key]));
+    } else {
+        cerr << "Warning: Key '" << key << "' does not exist in config." << endl;
+        return 0;
+    }
+}
+
 long long Config::get_timestamp(const string& key) {
     if (exist(key)) {
         return utils::get_timestamp(kv[key]);

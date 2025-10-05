@@ -34,3 +34,4 @@ add_subdirectory(src/libs/ta/linear_regression)
 
 add_subdirectory(src/scripts/tests)
 add_subdirectory(src/scripts/market_anal)
+add_subdirectory(src/scripts/trade_file_importer)

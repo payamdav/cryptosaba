@@ -1,8 +1,9 @@
 #pragma once
-#include <vector>
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <vector>
+
 
 using namespace std;
 
@@ -37,4 +38,11 @@ class TradeReader {
         Trade read_last();
         size_t search(size_t t);
         void pubsub_trades(size_t t1=0, size_t t2=0);
+        vector<Trade> read_by_ts_to_vector(size_t t1=0, size_t t2=0);
+
 };
+
+// utilities related to trades
+
+void write_trades_to_bin_file(string file_path_name, const vector<Trade>& trades);
+void write_trades_to_bin_file_price_ts(string file_path_name, const vector<Trade>& trades);

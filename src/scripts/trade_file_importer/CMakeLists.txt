@@ -1,0 +1,2 @@
+add_executable(trade_file_importert trade_file_importer.cpp)
+target_link_libraries(trade_file_importert utils config pubsub trade)

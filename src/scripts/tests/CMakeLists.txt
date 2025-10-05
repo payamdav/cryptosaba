@@ -1,3 +1,5 @@
 add_subdirectory(test1)
 add_subdirectory(candles_test)
 add_subdirectory(trendline_test)
+add_subdirectory(scene_test)
+add_subdirectory(trade_tests)

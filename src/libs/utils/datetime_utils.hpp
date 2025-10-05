@@ -10,6 +10,20 @@ struct YearMonthDay {
     int year;
     int month;
     int day;
+
+    YearMonthDay(int year, int month, int day) : year(year), month(month), day(day) {}
+    YearMonthDay() : year(1970), month(1), day(1) {}
+
+    YearMonthDay operator+(int days) const;
+    YearMonthDay operator-(int days) const;
+    bool operator<(const YearMonthDay& other) const;
+    bool operator<=(const YearMonthDay& other) const;
+    bool operator>(const YearMonthDay& other) const;
+    bool operator>=(const YearMonthDay& other) const;
+    bool operator==(const YearMonthDay& other) const;
+    bool operator!=(const YearMonthDay& other) const;
+
+    string to_string() const;
 };
 
 time_t get_date(int year, int month, int day);
@@ -19,4 +33,6 @@ long long get_timestamp(int year, int month, int day, int hour, int minute, int 
 long long get_timestamp(const string & date);
 string get_utc_datetime_string(long long ts);
 vector<YearMonthDay> get_year_month_days(long long start_ts, long long end_ts);
+
+
 }

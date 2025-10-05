@@ -4,6 +4,7 @@
 #include <boost/circular_buffer.hpp>
 #include <iostream>
 #include <string>
+#include <vector>
 
 
 class Candle {
@@ -52,3 +53,16 @@ class Candles : public boost::circular_buffer<Candle> {
         Candles * build_from_1s_candles(const Candles& candles_1s);
 };
 
+class CandlesVector : public std::vector<Candle> {
+    public:
+        size_t sec; // Candle duration in seconds
+
+        CandlesVector(size_t sec=1) : std::vector<Candle>() {
+            this->sec = sec;
+        }
+
+        void push(const Candle& candle); // push new candle ( only one second candles are allowed )
+        void push(const Trade& trade); // push new trade ( will create new candles as needed )
+        void build_from_trade_vector(const std::vector<Trade>& trades);
+        void write_to_binary_file(const std::string& file_path_name);
+};

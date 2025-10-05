@@ -57,4 +57,51 @@ vector<YearMonthDay> get_year_month_days(long long start_ts, long long end_ts) {
     return result;
 }
 
+YearMonthDay YearMonthDay::operator+(int days) const {
+    // create a tm struct
+    struct tm t = {0};
+    t.tm_year = year - 1900;
+    t.tm_mon = month - 1;
+    t.tm_mday = day + days; // add days
+    // normalize the tm struct
+    mktime(&t);
+    return {t.tm_year + 1900, t.tm_mon + 1, t.tm_mday};
+}
+
+YearMonthDay YearMonthDay::operator-(int days) const {
+    return (*this) + (-days);
+}
+
+bool YearMonthDay::operator<(const YearMonthDay& other) const {
+    if (year != other.year) return year < other.year;
+    if (month != other.month) return month < other.month;
+    return day < other.day;
+}
+
+bool YearMonthDay::operator<=(const YearMonthDay& other) const {
+    return (*this < other) || (*this == other);
+}
+
+bool YearMonthDay::operator>(const YearMonthDay& other) const {
+    return !(*this <= other);
+}
+
+bool YearMonthDay::operator>=(const YearMonthDay& other) const {
+    return !(*this < other);
+}
+
+bool YearMonthDay::operator==(const YearMonthDay& other) const {
+    return year == other.year && month == other.month && day == other.day;
+}
+
+bool YearMonthDay::operator!=(const YearMonthDay& other) const {
+    return !(*this == other);
+}
+
+string YearMonthDay::to_string() const {
+    char buf[11];
+    snprintf(buf, sizeof(buf), "%04d-%02d-%02d", year, month, day);
+    return string(buf);
+}
+
 }
