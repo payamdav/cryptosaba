@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -11,6 +12,10 @@
 
 
 using namespace std;
+
+double epsilon = 1e-6;
+size_t last_ts = 0;
+
 
 void read_binance_trade_file_and_append_to_binary_file(const string& input_file, const string& output_file) {
     // read trade csv file line by line and append to binary file
@@ -57,6 +62,42 @@ void read_binance_trade_file_and_append_to_binary_file(const string& input_file,
             cerr << "Error: Failed to parse line " << line_number << ": " << e.what() << endl;
             continue;
         }
+
+        // check integrity of trade data
+        if (trade.t < last_ts) {
+            cerr << input_file << " >> Error: Timestamps not in ascending order at line " << line_number << ": " << trade.t << " < " << last_ts << endl;
+            continue;
+        }
+        last_ts = trade.t;
+
+        if (trade.q <= epsilon) {
+            cerr << input_file << " >> Error: Invalid quantity at line " << line_number << ": " << trade.q << endl;
+            continue;
+        }
+        if (trade.v <= epsilon) {
+            cerr << input_file << " >> Error: Invalid volume at line " << line_number << ": " << trade.v << endl;
+            continue;
+        }
+        if (abs((trade.q / trade.v) - trade.p) > epsilon) {
+            // try to correct q befor reporting error
+            if (trade.q < 10) {
+                trade.q = trade.p * trade.v;
+                if (abs((trade.q / trade.v) - trade.p) <= epsilon) {
+                    // correction successful
+                    // nothing to do
+                } else {
+                    // correction failed
+                    cerr << input_file << " >> Error: Failed to correct quantity at line " << line_number << ": p=" << trade.p << ", q=" << trade.q << ", v=" << trade.v << " - correction failed!" << endl;
+                    continue;
+            }
+            } else {
+                // q is not small enough to be considered as broken length scientific notation
+                // report error
+                cerr << input_file << " >> Error: Inconsistent price, quantity, and volume at line " << line_number << ": p=" << trade.p << ", q=" << trade.q << ", v=" << trade.v << endl;
+                continue;
+            }
+        }
+
         // Write Trade object to binary file
         outfile.write(reinterpret_cast<const char*>(&trade), sizeof(Trade));
     }

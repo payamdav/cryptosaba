@@ -31,6 +31,7 @@ void test_trades_of_symbol(const string& symbol) {
         }
         if (abs((trade.q / trade.v) - trade.p) > epsilon) {
             count_invalid++;
+            cout << "Invalid trade - ts: " << trade.t << " - date: " << utils::get_utc_datetime_string(trade.t) << endl;
         }
     }
 
@@ -51,7 +52,7 @@ void test_trades_of_all_symbols() {
 }
 
 int main() {
-    test_trades_of_symbol("btcusdt");
-    // test_trades_of_all_symbols();
+    // test_trades_of_symbol("btcusdt");
+    test_trades_of_all_symbols();
     return 0;
 }
