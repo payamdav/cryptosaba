@@ -9,3 +9,7 @@ target_link_libraries(utils_test utils)
 
 # add_executable(eigen_compare_regression eigen_compare_regression.cpp)
 # target_link_libraries(eigen_compare_regression utils config pubsub trade Eigen3::Eigen)
+
+add_executable(lowess_test lowess_test.cpp)
+target_link_libraries(lowess_test utils config pubsub trade lowess candles)
+

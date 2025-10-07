@@ -15,6 +15,9 @@ project(cryptosaba)
 # using Eigen
 # find_package(Eigen3 3.4 CONFIG REQUIRED)
 
+# add path to include external headers
+include_directories(/usr/local/include)
+
 add_subdirectory(src/libs/utils)
 add_subdirectory(src/libs/core/config)
 add_subdirectory(src/libs/core/pubsub)
@@ -31,6 +34,7 @@ add_subdirectory(src/libs/ta/frames)
 add_subdirectory(src/libs/ta/volumebox)
 add_subdirectory(src/libs/ta/linear_regression)
 # add_subdirectory(src/libs/ta/vnode)
+add_subdirectory(src/libs/ta/lowess)
 
 add_subdirectory(src/scripts/tests)
 add_subdirectory(src/scripts/market_anal)
