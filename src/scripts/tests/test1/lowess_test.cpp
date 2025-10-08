@@ -38,10 +38,10 @@ void lowess1(string symbol, size_t ts, size_t half_neighbors_count = 100, size_t
     LowessResult lowess_result = lowess(candles_1s, half_neighbors_count, index);
     cout << "Lowess result: " << lowess_result.ts << " " << lowess_result.y << " " << lowess_result.w << endl;
 
-    vector<LowessResult> lowess_results = lowess(candles_1s, 300);
+    vector<LowessResult> lowess_results = lowess(candles_1s, 2*3600);
     save_lowess_results_to_binary_file(Config::getInstance().files_path + "lowess_1s.bin", lowess_results);
 
-    vector<LowessResult> lowess_results_60s = lowess(candles_60s, 10);
+    vector<LowessResult> lowess_results_60s = lowess(candles_60s, 120);
     save_lowess_results_to_binary_file(Config::getInstance().files_path + "lowess_60s.bin", lowess_results_60s);
 
     vector<LowessResult> lowess_results_1h = lowess(candles_1h, 2);
