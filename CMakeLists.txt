@@ -35,7 +35,10 @@ add_subdirectory(src/libs/ta/volumebox)
 add_subdirectory(src/libs/ta/linear_regression)
 # add_subdirectory(src/libs/ta/vnode)
 add_subdirectory(src/libs/ta/lowess)
+add_subdirectory(src/libs/binance)
+
 
 add_subdirectory(src/scripts/tests)
 add_subdirectory(src/scripts/market_anal)
 add_subdirectory(src/scripts/trade_file_importer)
+add_subdirectory(src/scripts/candle_file_creator)

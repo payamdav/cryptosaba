@@ -24,6 +24,8 @@ Candle::Candle(const Trade& trade, size_t sec) {
     this->vs = trade.is_buyer_maker ? trade.v : 0;
     this->vb = trade.is_buyer_maker ? 0 : trade.v;
     this->q = trade.q;
+    this->qs = trade.is_buyer_maker ? trade.q : 0;
+    this->qb = trade.is_buyer_maker ? 0 : trade.q;
 }
 
 Candle::Candle(const Candle& candle, size_t sec) {
@@ -38,6 +40,8 @@ Candle::Candle(const Candle& candle, size_t sec) {
     this->vs = candle.vs;
     this->vb = candle.vb;
     this->q = candle.q;
+    this->qs = candle.qs;
+    this->qb = candle.qb;
 }
 
 void Candle::push(const Trade& trade, size_t sec) {
@@ -51,6 +55,8 @@ void Candle::push(const Trade& trade, size_t sec) {
     this->v += trade.v;
     this->vs += trade.is_buyer_maker ? trade.v : 0;
     this->vb += trade.is_buyer_maker ? 0 : trade.v;
+    this->qs += trade.is_buyer_maker ? trade.q : 0;
+    this->qb += trade.is_buyer_maker ? 0 : trade.q;
     this->q += trade.q;
     this->n += 1;
     this->vwap = this->v != 0 ? this->q / this->v : 0;
@@ -67,6 +73,8 @@ void Candle::push(const Candle& candle, size_t sec) {
     this->v += candle.v;
     this->vs += candle.vs;
     this->vb += candle.vb;
+    this->qs += candle.qs;
+    this->qb += candle.qb;
     this->q += candle.q;
     this->n += candle.n;
     this->vwap = this->v != 0 ? this->q / this->v : 0;
@@ -97,6 +105,8 @@ Candle Candle::filling_candle(size_t sec) {
     candle.vs = 0;
     candle.vb = 0;
     candle.q = 0;
+    candle.qs = 0;
+    candle.qb = 0;
     return candle;
 }
 
@@ -238,6 +248,8 @@ void CandlesVector::write_to_binary_file(const std::string& file_path_name) {
         candle_data.write(reinterpret_cast<const char*>(&candle.vs), sizeof(candle.vs));
         candle_data.write(reinterpret_cast<const char*>(&candle.vb), sizeof(candle.vb));
         candle_data.write(reinterpret_cast<const char*>(&candle.q), sizeof(candle.q));
+        candle_data.write(reinterpret_cast<const char*>(&candle.qs), sizeof(candle.qs));
+        candle_data.write(reinterpret_cast<const char*>(&candle.qb), sizeof(candle.qb));
     }
     candle_data.close(); // Close the file after writing
 }

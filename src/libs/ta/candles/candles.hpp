@@ -20,6 +20,8 @@ class Candle {
         double vs=0;
         double vb=0;
         double q=0;
+        double qs=0;
+        double qb=0;
 
         Candle() = default;
         Candle(const Trade& trade, size_t sec); // initiate candle by first trade that is part of it

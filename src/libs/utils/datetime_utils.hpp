@@ -26,6 +26,27 @@ struct YearMonthDay {
     string to_string() const;
 };
 
+struct YearMonth {
+    int year;
+    int month;
+
+    YearMonth(int year, int month) : year(year), month(month) {}
+    YearMonth() : year(1970), month(1) {}
+
+    YearMonth operator+(int months) const;
+    YearMonth operator-(int months) const;
+    bool operator<(const YearMonth& other) const;
+    bool operator<=(const YearMonth& other) const;
+    bool operator>(const YearMonth& other) const;
+    bool operator>=(const YearMonth& other) const;
+    bool operator==(const YearMonth& other) const;
+    bool operator!=(const YearMonth& other) const;
+
+    string to_string() const;
+};
+
+
+
 time_t get_date(int year, int month, int day);
 time_t get_datetime(int year, int month, int day, int hour, int minute, int second);
 time_t epoch_date();

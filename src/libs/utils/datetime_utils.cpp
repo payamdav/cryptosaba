@@ -104,4 +104,50 @@ string YearMonthDay::to_string() const {
     return string(buf);
 }
 
+
+YearMonth YearMonth::operator+(int months) const {
+    // calculate total months from year 0
+    int total_months = year * 12 + (month - 1) + months;
+    int new_year = total_months / 12;
+    int new_month = (total_months % 12) + 1;
+    return {new_year, new_month};
+}
+
+YearMonth YearMonth::operator-(int months) const {
+    return (*this) + (-months);
+}
+
+bool YearMonth::operator<(const YearMonth& other) const {
+    if (year != other.year) return year < other.year;
+    return month < other.month;
+}
+
+bool YearMonth::operator<=(const YearMonth& other) const {
+    return (*this < other) || (*this == other);
+}
+
+bool YearMonth::operator>(const YearMonth& other) const {
+    return !(*this <= other);
+}
+
+bool YearMonth::operator>=(const YearMonth& other) const {
+    return !(*this < other);
+}
+
+bool YearMonth::operator==(const YearMonth& other) const {
+    return year == other.year && month == other.month;
+}
+
+bool YearMonth::operator!=(const YearMonth& other) const {
+    return !(*this == other);
+}
+
+string YearMonth::to_string() const {
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%04d-%02d", year, month);
+    return string(buf);
+}
+
+
+
 }
