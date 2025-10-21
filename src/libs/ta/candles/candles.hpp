@@ -2,13 +2,17 @@
 #include "../../core/pubsub/pubsub.hpp"
 #include "../../trade/trade.hpp"
 #include <boost/circular_buffer.hpp>
+#include <cstddef>
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cstring>
+#include <fstream>
 
 
 class Candle {
     public:
+        size_t timeframe = 1; // timeframe in seconds
         size_t t=0;
         double o=0;
         double h=0;
@@ -24,17 +28,51 @@ class Candle {
         double qb=0;
 
         Candle() = default;
-        Candle(const Trade& trade, size_t sec); // initiate candle by first trade that is part of it
-        Candle(const Candle& candle, size_t sec); // initiate candle by first candle that is part of it
-        void push(const Trade& trade, size_t sec); // add trade to candle
-        void push(const Candle& candle, size_t sec); // add candle to candle ( useful for building higher timeframe candles from 1s timeframe candles )
-        bool is_time_in_candle(size_t t, size_t sec);
+        Candle(size_t timeframe=1);
+        Candle(const Trade& trade, size_t timeframe=1); // initiate candle by first trade that is part of it
+        Candle(const Candle& candle, size_t timeframe); // initiate candle by first candle that is part of it
+        Candle(const char* buffer); // initiate candle from binary buffer (buffer must be at least 112 bytes)
+        void push(const Trade& trade); // add trade to candle
+        void push(const Candle& candle); // add candle to candle ( useful for building higher timeframe candles from 1s timeframe candles )
+
+        size_t candle_end_time();
+        bool is_time_in_candle(size_t t);
         bool is_time_before_candle(size_t t);
-        bool is_time_next_candle(size_t t, size_t sec);
-        Candle filling_candle(size_t sec); // return a new candle that fills the gap for empty time slot
+        bool is_time_next_candle(size_t t);
+        Candle filling_candle(); // return a new candle that fills the gap for empty time slot
+
+        void to_buffer(char* buffer) const; // write candle to binary buffer (buffer must be at least 112 bytes)
+        static constexpr size_t buffer_size() { return 3 * sizeof(size_t) + 11 * sizeof(double); } // 112 bytes
+
 };
 
 std::ostream& operator<<(std::ostream& os, const Candle& candle);
+
+// Candle builder and writer from trades
+
+class CandleWriter {
+    public:
+        std::string symbol;
+        size_t timeframe; // Candle duration in seconds
+        string file_path_name;
+        ofstream file_stream;
+        Candle candle;
+        size_t last_trade_time = 0;
+        char buffer[Candle::buffer_size()];
+ 
+        CandleWriter(string symbol, size_t timeframe=1);
+        ~CandleWriter();
+        void write_current_candle_to_file();
+        void push(const Trade& trade); // push new trade ( will create new candles as needed )        
+};
+
+string candle_file_path_name(string symbol, size_t timeframe=1);
+
+
+// candle series
+
+
+
 
 class Candles : public boost::circular_buffer<Candle> {
     private:
@@ -43,9 +81,9 @@ class Candles : public boost::circular_buffer<Candle> {
         std::string topic_candles_on_new_candle;
         
     public:
-        size_t sec; // Candle duration in seconds
+        size_t timeframe; // Candle duration in seconds
 
-        Candles(size_t sec=1, size_t retain_count=1000);
+        Candles(size_t timeframe=1, size_t retain_count=1000);
 
         void push(const Candle& candle); // push new candle ( only one second candles are allowed )
         void push(const Trade& trade); // push new trade ( will create new candles as needed )
@@ -57,14 +95,15 @@ class Candles : public boost::circular_buffer<Candle> {
 
 class CandlesVector : public std::vector<Candle> {
     public:
-        size_t sec; // Candle duration in seconds
+        size_t timeframe; // Candle duration in seconds
 
-        CandlesVector(size_t sec=1) : std::vector<Candle>() {
-            this->sec = sec;
+        CandlesVector(size_t timeframe=1) : std::vector<Candle>() {
+            this->timeframe = timeframe;
         }
 
         void push(const Candle& candle); // push new candle ( only one second candles are allowed )
         void push(const Trade& trade); // push new trade ( will create new candles as needed )
         void build_from_trade_vector(const std::vector<Trade>& trades);
         void write_to_binary_file(const std::string& file_path_name);
+        void read_from_binary_file_by_symbol(const std::string& symbol);
 };

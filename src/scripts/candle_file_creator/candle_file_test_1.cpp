@@ -1,8 +1,11 @@
+#include <cstddef>
 #include <iostream>
 #include <string>
-#include "../../libs//utils//datetime_utils.hpp"
-#include "../../libs//utils//file_utils.hpp"
-#include "../../libs//binance//binance.hpp"
+#include "../../libs/utils//datetime_utils.hpp"
+#include "../../libs/utils//file_utils.hpp"
+#include "../../libs/binance//binance.hpp"
+#include "../../libs/ta/candles//candles.hpp"
+#include "../../libs/core/pubsub//pubsub.hpp"
 
 using namespace std;
 
@@ -41,10 +44,52 @@ void test_download_binance_trade_data(string symbol, int year, int month, int da
 
 void test_publish_trades_from_csv_file(string symbol, int year, int month, int day=0) {
     std::cout << "\n=== Testing publish trades from CSV for " << symbol << " ===" << std::endl;
+    size_t publish_count = 0;
+    // subscrijbe to trade pubsub to count published trades using a lambda function
+    PubSub::getInstance().subscribe("trade", [&publish_count](const void* data) {
+        publish_count++;
+    });
     string csv_file_path = publish_trades_from_csv_file(symbol, year, month, day);
     std::cout << "Published trades from CSV file: " << csv_file_path << std::endl;
+    std::cout << "Total published trades: " << publish_count << std::endl;
+    // write line count
+    size_t line_count = utils::count_lines_in_file(csv_file_path);
+    std::cout << "Line count in CSV file: " << line_count << std::endl;
     // remove file
-    utils::remove_file(csv_file_path);
+    // utils::remove_file(csv_file_path);
+}
+
+void test_publish_trades_from_csv_file_and_write_candles(string symbol, int year, int month, int day=0) {
+    std::cout << "\n=== Testing publish trades from CSV for " << symbol << " ===" << std::endl;
+    size_t publish_count = 0;
+    CandleWriter candle_writer(symbol, 1);
+
+    // subscrijbe to trade pubsub to count published trades using a lambda function
+    PubSub::getInstance().subscribe("trade", [&publish_count, &candle_writer](const void* data) {
+        publish_count++;
+        candle_writer.push(*(Trade*)data);
+    });
+    string csv_file_path = publish_trades_from_csv_file(symbol, year, month, day);
+    std::cout << "Published trades from CSV file: " << csv_file_path << std::endl;
+    std::cout << "Total published trades: " << publish_count << std::endl;
+    // write line count
+    size_t line_count = utils::count_lines_in_file(csv_file_path);
+    std::cout << "Line count in CSV file: " << line_count << std::endl;
+    candle_writer.write_current_candle_to_file();
+    // remove file
+    // utils::remove_file(csv_file_path);
+}
+
+void test_candles_binary_file(string symbol) {
+    // cehck file size
+    cout << "Reading candles binary file for symbol: " << symbol << " - file size: " << utils::get_file_size(candle_file_path_name(symbol, 1)) << " bytes" << " - count of candles: " << utils::get_file_size(candle_file_path_name(symbol, 1)) / Candle::buffer_size() << endl;
+
+    CandlesVector candles_vector(1);
+    candles_vector.read_from_binary_file_by_symbol(symbol);
+    std::cout << "Total candles read from binary file: " << candles_vector.size() << std::endl;
+    cout << "First candle: " << candles_vector.front() << std::endl;
+    cout << "Last candle: " << candles_vector.back() << std::endl;
+
 }
 
 
@@ -57,7 +102,10 @@ int main() {
     // test_binance_url("ethusdt", 2024, 1);
     // std::cout << std::endl;
     // test_download_binance_trade_data("vineusdt", 2025, 8, 15);
-    test_publish_trades_from_csv_file("vineusdt", 2025, 8, 15);
+    // test_publish_trades_from_csv_file("vineusdt", 2025, 8, 15);
+    // test_publish_trades_from_csv_file_and_write_candles("vineusdt", 2025, 8, 15);
+    test_candles_binary_file("vineusdt");
+
 
     return 0;
 }

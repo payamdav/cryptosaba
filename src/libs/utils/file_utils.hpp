@@ -14,4 +14,5 @@ namespace utils {
     std::vector<std::string> list_files(const std::string& path, const std::string& ext);
     void touch_file(const std::string& path);
     size_t get_file_size(const std::string& path);
+    size_t count_lines_in_file(const std::string& path);
 }

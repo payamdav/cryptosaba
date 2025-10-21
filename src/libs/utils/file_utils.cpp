@@ -79,5 +79,18 @@ size_t get_file_size(const string& path) {
     return file.tellg();
 }
 
+size_t count_lines_in_file(const string& path) {
+    ifstream file(path);
+    if (!file) {
+        throw runtime_error("Error opening file: " + path);
+    }
+    size_t line_count = 0;
+    string line;
+    while (getline(file, line)) {
+        line_count++;
+    }
+    return line_count;
+}
+
 }
 
