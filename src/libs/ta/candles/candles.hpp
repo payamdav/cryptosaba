@@ -68,6 +68,31 @@ class CandleWriter {
 
 string candle_file_path_name(string symbol, size_t timeframe=1);
 
+class CandleReader {
+    public:
+        string file_path_name;
+        ifstream file_stream;
+        long long index = 0;
+        Candle current_candle;
+        long long start = 0;
+        long long end = 0;
+        size_t sizeof_candle = Candle::buffer_size();
+        size_t size = 0;
+
+        CandleReader(string symbol, size_t timeframe=1);
+        ~CandleReader();
+
+        void open();
+        void close();
+
+        void go(size_t index=0);
+        bool read_next(Candle& candle);
+        bool read(Candle& candle, size_t index);
+        void set_start(size_t start_index);
+        void set_end(size_t end_index);
+
+};
+
 
 // candle series
 

@@ -1,9 +1,11 @@
 #include "candles.hpp"
 #include <cstddef>
 #include <iostream>
+#include <fstream>
 #include <cstdlib> 
 #include "../../core/config/config.hpp"
 #include "../../utils/string_utils.hpp"
+#include "../../utils/file_utils.hpp"
 
 
 std::ostream& operator<<(std::ostream& os, const Candle& candle) {
@@ -274,6 +276,95 @@ void CandleWriter::push(const Trade& trade) {
 string candle_file_path_name(string symbol, size_t timeframe) {
     return (Config::getInstance()).data_path + "um/candles/" + utils::toLowerCase(symbol) + "_" + std::to_string(timeframe) + "s.candles";
 }
+
+// candle Reader methods
+
+CandleReader::CandleReader(string symbol, size_t timeframe) : current_candle(timeframe) {
+    this->file_path_name = candle_file_path_name(symbol, timeframe);
+    this->sizeof_candle = Candle::buffer_size();
+    this->size = utils::get_file_size(this->file_path_name) / this->sizeof_candle;
+    this->open();
+    this->start = 0;
+    this->end = this->size - 1;
+}
+
+CandleReader::~CandleReader() {
+    this->close();
+}
+
+void CandleReader::open() {
+    this->file_stream.open(this->file_path_name, std::ios::in | std::ios::binary);
+    if (!this->file_stream.is_open()) {
+        std::cout << "Error: Could not open file for reading candles: " << this->file_path_name << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+    this->index = 0;
+}
+
+void CandleReader::close() {
+    if (this->file_stream.is_open()) {
+        this->file_stream.close();
+    }
+}
+
+void CandleReader::go(size_t index) {
+    if (index >= this->size || index < 0) {
+        std::cout << "Error: Index out of range in CandleReader::go(): " << index << std::endl;
+        return;
+    }
+    if (!this->file_stream.is_open()) {
+        std::cout << "Error: File is not open for reading candles: " << this->file_path_name << std::endl;
+        return;
+    }
+    this->file_stream.seekg(index * this->sizeof_candle, std::ios::beg);
+    this->index = index;
+}
+
+bool CandleReader::read_next(Candle& candle) {
+    if (this->index > this->end) {
+        return false;
+    }
+    if (!this->file_stream.is_open()) {
+        std::cout << "Error: File is not open for reading candles: " << this->file_path_name << std::endl;
+        return false;
+    }
+    if (this->index >= this->size) {
+        return false;
+    }
+    char buffer[this->sizeof_candle];
+    this->file_stream.read(buffer, this->sizeof_candle);
+    if (this->file_stream.gcount() != this->sizeof_candle) {
+        return false;
+    }
+    candle = Candle(buffer);
+    this->index += 1;
+    return true;
+}
+
+bool CandleReader::read(Candle& candle, size_t index) {
+    this->go(index);
+    return this->read_next(candle);
+}
+
+void CandleReader::set_start(size_t start_index) {
+    if (start_index >= this->size) {
+        std::cout << "Error: Start index out of range in CandleReader::set_start(): " << start_index << std::endl;
+        return;
+    }
+    this->start = start_index;
+    this->go(this->start);
+}
+
+void CandleReader::set_end(size_t end_index) {
+    if (end_index >= this->size) {
+        std::cout << "Error: End index out of range in CandleReader::set_end(): " << end_index << std::endl;
+        return;
+    }
+    this->end = end_index;
+}
+
+
+
 
 // Candles methods
 
