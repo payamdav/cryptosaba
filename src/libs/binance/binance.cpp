@@ -42,6 +42,40 @@ string prepare_destination_directory() {
     return data_dir;
 }
 
+static string binance_trade_file_name_zip(const string& symbol, int year, int month, int day) {
+    if (day > 0) {
+        utils::YearMonthDay ymd(year, month, day);
+        return format("{}-trades-{}.zip", utils::toUpperCase(symbol), ymd.to_string());
+    }
+    else {
+        utils::YearMonth ym(year, month);
+        return format("{}-trades-{}.zip", utils::toUpperCase(symbol), ym.to_string());
+    }
+}
+
+static string prepare_destination_file_path_zip(const string& symbol, int year, int month, int day) {
+    string data_dir = prepare_destination_directory();
+    string filename = binance_trade_file_name_zip(symbol, year, month, day);
+    return data_dir + "/" + filename;
+}
+
+static string binance_trade_file_name(const string& symbol, int year, int month, int day) {
+    if (day > 0) {
+        utils::YearMonthDay ymd(year, month, day);
+        return format("{}-trades-{}.csv", utils::toUpperCase(symbol), ymd.to_string());
+    }
+    else {
+        utils::YearMonth ym(year, month);
+        return format("{}-trades-{}.csv", utils::toUpperCase(symbol), ym.to_string());
+    }
+}
+
+static string binance_trade_file_path(const string& symbol, int year, int month, int day) {
+    string data_dir = prepare_destination_directory();
+    string filename = binance_trade_file_name(symbol, year, month, day);
+    return data_dir + "/" + filename;
+}
+
 // Callback function for libcurl to write data to file
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
     size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
@@ -115,10 +149,20 @@ string download_binance_trade_data(const string& symbol, int year, int month, in
     return data_dir + "/" + unzipped_filename;
 }
 
+string download_binance_trade_data_if_not_exists(const string& symbol, int year, int month, int day) {
+    string file_path = binance_trade_file_path(symbol, year, month, day);
+    if (utils::is_path_exists(file_path)) {
+        std::cout << "File already exists: " << file_path << std::endl;
+        return file_path;
+    } else {
+        return download_binance_trade_data(symbol, year, month, day);
+    }
+}
+
 
 string publish_trades_from_csv_file(const string& symbol, int year, int month, int day) {
-    // Download the trade data file
-    string csv_file_path = download_binance_trade_data(symbol, year, month, day);
+    // Download the trade data file if it doesn't exist
+    string csv_file_path = download_binance_trade_data_if_not_exists(symbol, year, month, day);
     if (csv_file_path.empty()) {
         std::cerr << "Failed to download trade data." << std::endl;
         return "";

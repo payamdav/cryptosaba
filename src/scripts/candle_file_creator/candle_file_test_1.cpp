@@ -64,14 +64,28 @@ void test_publish_trades_from_csv_file_and_write_candles(string symbol, int year
     size_t publish_count = 0;
     CandleWriter candle_writer(symbol, 1);
 
+    size_t first_trade_time = 0;
+    size_t last_trade_time = 0;
+
     // subscrijbe to trade pubsub to count published trades using a lambda function
-    PubSub::getInstance().subscribe("trade", [&publish_count, &candle_writer](const void* data) {
+    PubSub::getInstance().subscribe("trade", [&publish_count, &candle_writer, &first_trade_time, &last_trade_time](const void* data) {
         publish_count++;
-        candle_writer.push(*(Trade*)data);
+        Trade* trade_pointer = (Trade*)data;
+
+        if (publish_count == 1) {
+            first_trade_time = trade_pointer->t;
+        }
+        if (trade_pointer->t > last_trade_time) {
+            last_trade_time = trade_pointer->t;
+        }
+
+        candle_writer.push(*trade_pointer);
     });
     string csv_file_path = publish_trades_from_csv_file(symbol, year, month, day);
     std::cout << "Published trades from CSV file: " << csv_file_path << std::endl;
     std::cout << "Total published trades: " << publish_count << std::endl;
+    std::cout << "First trade time: " << first_trade_time << std::endl;
+    std::cout << "Last trade time: " << last_trade_time << std::endl;
     // write line count
     size_t line_count = utils::count_lines_in_file(csv_file_path);
     std::cout << "Line count in CSV file: " << line_count << std::endl;
@@ -103,7 +117,7 @@ int main() {
     // std::cout << std::endl;
     // test_download_binance_trade_data("vineusdt", 2025, 8, 15);
     // test_publish_trades_from_csv_file("vineusdt", 2025, 8, 15);
-    // test_publish_trades_from_csv_file_and_write_candles("vineusdt", 2025, 8, 15);
+    test_publish_trades_from_csv_file_and_write_candles("vineusdt", 2025, 8, 18);
     test_candles_binary_file("vineusdt");
 
 
