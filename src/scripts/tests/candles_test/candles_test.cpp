@@ -5,6 +5,7 @@
 #include "../../../libs/core/pubsub/pubsub.hpp"
 #include "../../../libs/trade/trade.hpp"
 #include "../../../libs/ta/candles/candles.hpp"
+#include "../../../libs/utils/datetime_utils.hpp"
 
 
 using namespace std;
@@ -101,10 +102,34 @@ void write_candles_trades_to_binary_file() {
 
 }
 
+void read_candles_from_binary_file(string symbol, size_t start_ts = 0, size_t end_ts = 0) {
+    cout << "Reading candles binary file for symbol: " << symbol << " - from " << start_ts << " " << utils::get_utc_datetime_string(start_ts) << " to " << end_ts << " " << utils::get_utc_datetime_string(end_ts) << endl;
+
+    CandlesVector candles(symbol, start_ts, end_ts);
+    cout << "Read " << candles.size() << " candles from binary file." << endl;
+    cout << "First Candle: " << candles.front() << endl;
+    cout << "Last Candle: " << candles.back() << endl;
+}
+
+void test_candles_integrity_check(string symbol, size_t start_ts = 0, size_t end_ts = 0) {
+    CandlesVector candles(1);
+    candles.report_candles_integrity(symbol, start_ts, end_ts);
+}
 
 int main() {
     // test1();
-    write_candles_trades_to_binary_file();
+    // write_candles_trades_to_binary_file();
+    // read_candles_from_binary_file("btcusdt", utils::get_timestamp("2025-03-20 00:00:10"), utils::get_timestamp("2025-03-20 00:00:15"));
+
+    test_candles_integrity_check("btcusdt");
+    test_candles_integrity_check("ethusdt");
+    test_candles_integrity_check("xrpusdt");
+    test_candles_integrity_check("adausdt");
+    test_candles_integrity_check("dogeusdt");
+    test_candles_integrity_check("trumpusdt");
+    test_candles_integrity_check("vineusdt");
+    
+
     return 0;
 }
 

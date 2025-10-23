@@ -99,7 +99,7 @@ void test_candles_binary_file(string symbol) {
     cout << "Reading candles binary file for symbol: " << symbol << " - file size: " << utils::get_file_size(candle_file_path_name(symbol, 1)) << " bytes" << " - count of candles: " << utils::get_file_size(candle_file_path_name(symbol, 1)) / Candle::buffer_size() << endl;
 
     CandlesVector candles_vector(1);
-    candles_vector.read_from_binary_file_by_symbol(symbol);
+    candles_vector.read_from_binary_file(symbol);
     std::cout << "Total candles read from binary file: " << candles_vector.size() << std::endl;
     cout << "First candle: " << candles_vector.front() << std::endl;
     cout << "Last candle: " << candles_vector.back() << std::endl;

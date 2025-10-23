@@ -78,6 +78,9 @@ class CandleReader {
         long long end = 0;
         size_t sizeof_candle = Candle::buffer_size();
         size_t size = 0;
+        size_t first_ts = 0;
+        size_t last_ts = 0;
+        size_t timeframe = 0;
 
         CandleReader(string symbol, size_t timeframe=1);
         ~CandleReader();
@@ -86,7 +89,9 @@ class CandleReader {
         void close();
 
         void go(size_t index=0);
+        void go_to_timestamp(size_t timestamp);
         bool read_next(Candle& candle);
+        bool read_next();
         bool read(Candle& candle, size_t index);
         void set_start(size_t start_index);
         void set_end(size_t end_index);
@@ -122,13 +127,13 @@ class CandlesVector : public std::vector<Candle> {
     public:
         size_t timeframe; // Candle duration in seconds
 
-        CandlesVector(size_t timeframe=1) : std::vector<Candle>() {
-            this->timeframe = timeframe;
-        }
+        CandlesVector(size_t timeframe=1);
+        CandlesVector(string symbol, size_t start_ts = 0, size_t end_ts = 0);
 
         void push(const Candle& candle); // push new candle ( only one second candles are allowed )
         void push(const Trade& trade); // push new trade ( will create new candles as needed )
         void build_from_trade_vector(const std::vector<Trade>& trades);
         void write_to_binary_file(const std::string& file_path_name);
-        void read_from_binary_file_by_symbol(const std::string& symbol);
+        void report_candles_integrity(const std::string& file_path_name, size_t start_ts=0, size_t end_ts=0);
+        void read_from_binary_file(const std::string& file_path_name, size_t start_ts=0, size_t end_ts=0);
 };

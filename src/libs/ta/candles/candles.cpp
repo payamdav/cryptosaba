@@ -280,6 +280,7 @@ string candle_file_path_name(string symbol, size_t timeframe) {
 // candle Reader methods
 
 CandleReader::CandleReader(string symbol, size_t timeframe) : current_candle(timeframe) {
+    this->timeframe = timeframe;
     this->file_path_name = candle_file_path_name(symbol, timeframe);
     this->sizeof_candle = Candle::buffer_size();
     this->size = utils::get_file_size(this->file_path_name) / this->sizeof_candle;
@@ -299,6 +300,13 @@ void CandleReader::open() {
         std::exit(EXIT_FAILURE);
     }
     this->index = 0;
+    // read first candle to initialize first_ts
+    if (this->read_next(this->current_candle)) {
+        this->first_ts = this->current_candle.t;
+        this->last_ts = this->current_candle.t + (this->size - 1) * this->timeframe * 1000;
+    }
+    // go to start
+    this->go(this->start);
 }
 
 void CandleReader::close() {
@@ -320,6 +328,15 @@ void CandleReader::go(size_t index) {
     this->index = index;
 }
 
+void CandleReader::go_to_timestamp(size_t timestamp) {
+    if (timestamp < this->first_ts || timestamp > this->last_ts) {
+        std::cout << "Error: Timestamp out of range in CandleReader::go_to_timestamp(): " << timestamp << std::endl;
+        return;
+    }
+    size_t index = (timestamp - this->first_ts) / (this->timeframe * 1000);
+    this->go(index);
+}
+
 bool CandleReader::read_next(Candle& candle) {
     if (this->index > this->end) {
         return false;
@@ -339,6 +356,10 @@ bool CandleReader::read_next(Candle& candle) {
     candle = Candle(buffer);
     this->index += 1;
     return true;
+}
+
+bool CandleReader::read_next() {
+    return this->read_next(this->current_candle);
 }
 
 bool CandleReader::read(Candle& candle, size_t index) {
@@ -440,6 +461,12 @@ void Candles::push(const Trade& trade) {
 
 // CandlesVector methods
 
+CandlesVector::CandlesVector(size_t timeframe) : timeframe(timeframe) {}
+
+CandlesVector::CandlesVector(string symbol, size_t start_ts, size_t end_ts) : timeframe(1) {
+    this->read_from_binary_file(symbol, start_ts, end_ts);
+}
+
 void CandlesVector::push(const Candle& candle) {
     if (this->empty()) {
         this->emplace_back(Candle(candle, this->timeframe));
@@ -511,21 +538,56 @@ void CandlesVector::write_to_binary_file(const std::string& file_path_name) {
     candle_data.close(); // Close the file after writing
 }
 
-void CandlesVector::read_from_binary_file_by_symbol(const std::string& symbol) {
-    std::string file_path_name = (Config::getInstance()).data_path + "um/candles/" + utils::toLowerCase(symbol) + "_" + std::to_string(this->timeframe) + "s.candles";
-    std::ifstream candle_data(file_path_name, std::ios::in | std::ios::binary); // Open the binary file for reading
-    if (!candle_data.is_open()) {
-        std::cout << "Error: Could not open file for reading candles: " << file_path_name << std::endl;
-        return; // Return early if the file cannot be opened
+void CandlesVector::report_candles_integrity(const std::string& file_path_name, size_t start_ts, size_t end_ts) {
+    double eps = 1e-6;
+    this->read_from_binary_file(file_path_name, start_ts, end_ts);
+    Candle previous_candle = this->front();
+    double total_v = 0;
+    double total_vs = 0;
+    double total_vb = 0;
+    double total_q = 0;
+    double total_qs = 0;
+    double total_qb = 0;
+    size_t count = 0;
+    for (const auto& candle : *(this)) {
+        count++;
+        if (count == 1) continue;
+
+        if (candle.t != previous_candle.t + this->timeframe * 1000) { std::cout << "Gap detected between candles at " << previous_candle.t << " and " << candle << std::endl; }
+        if (candle.o < 0 || candle.h < 0 || candle.l < 0 || candle.c < 0) { std::cout << "Negative price detected in candle at " << candle << std::endl; }
+        if (candle.v < 0 || candle.vs < 0 || candle.vb < 0) { std::cout << "Negative volume detected in candle at " << candle << std::endl; }
+        if (candle.q < 0 || candle.qs < 0 || candle.qb < 0) { std::cout << "Negative quantity detected in candle at " << candle << std::endl; }
+        if (candle.vwap < 0) { std::cout << "Negative VWAP detected in candle at " << candle << std::endl; }
+        if (candle.n < 0) { std::cout << "Negative trade count detected in candle at " << candle << std::endl; }
+        if (candle.h - candle.l < -eps || candle.h - candle.o < -eps || candle.h - candle.c < -eps || candle.h - candle.vwap < -eps) { std::cout << "Inconsistent high price detected in candle at " << candle << std::endl; }
+        if (candle.l - candle.h > eps || candle.l - candle.o > eps || candle.l - candle.c > eps || candle.l - candle.vwap > eps) { std::cout << "Inconsistent low price detected in candle at " << candle << std::endl; }
+        if (candle.q - candle.qs - candle.qb > eps) { std::cout << "Inconsistent quantity detected in candle at " << candle << std::endl; }
+        if (candle.v - candle.vs - candle.vb > eps) { std::cout << "Inconsistent volume detected in candle at " << candle << std::endl; }
+        if (candle.n > 0 && abs(candle.vwap - (candle.q / candle.v)) > eps) { std::cout << "Inconsistent VWAP detected in candle at " << candle << std::endl; }
+
+        total_v += candle.v;
+        total_vs += candle.vs;
+        total_vb += candle.vb;
+        total_q += candle.q;
+        total_qs += candle.qs;
+        total_qb += candle.qb;
+
+        previous_candle = candle;
     }
-    // clear vector
+
+    std::cout << "Total volume: " << total_v << " = " << total_vs << " + " << total_vb << std::endl;
+    std::cout << "Total quantity: " << total_q << " = " << total_qs << " + " << total_qb << std::endl;
+}
+
+void CandlesVector::read_from_binary_file(const std::string& file_path_name, size_t start_ts, size_t end_ts) {
     this->clear();
-    size_t buffer_size = Candle::buffer_size();
-    char* buffer = new char[buffer_size];
-    while (candle_data.read(buffer, buffer_size)) {
-        emplace_back(Candle(buffer));
-    }
-    delete[] buffer;
-    candle_data.close(); // Close the file after reading
+    CandleReader reader(file_path_name);
+    if (start_ts == 0) start_ts = reader.first_ts;
+    if (end_ts == 0) end_ts = reader.last_ts;
+    reader.go_to_timestamp(start_ts);
+    while (reader.read_next()) {
+        if (reader.current_candle.t > end_ts) break;
+        this->push(reader.current_candle);
+    }   
 }
 
