@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <string>
 #include <iostream>
 // #include "../../../libs/utils/timer.hpp"
@@ -6,6 +7,7 @@
 #include "../../../libs/trade/trade.hpp"
 #include "../../../libs/ta/candles/candles.hpp"
 #include "../../../libs/utils/datetime_utils.hpp"
+#include "../../../libs/statistics/live_stats.hpp"
 
 
 using namespace std;
@@ -116,19 +118,68 @@ void test_candles_integrity_check(string symbol, size_t start_ts = 0, size_t end
     candles.report_candles_integrity(symbol, start_ts, end_ts);
 }
 
+void create_file_for_chart(string symbol, size_t start_ts = 0, size_t end_ts = 0) {
+    CandlesVector candles(symbol, start_ts, end_ts);
+    candles.write_to_binary_file(Config::getInstance().files_path + "chart_candles.bin", "full"); // mode can be "full"
+
+    // write trade file as well
+    write_trades_to_bin_file_price_ts(Config::getInstance().files_path + "chart_trades.bin", TradeReader(symbol).read_by_ts_to_vector(start_ts, end_ts));
+}
+
+void test_candle_publishing() {
+    CandleReader candle_reader("btcusdt", 1);
+    PubSub& pubsub = PubSub::getInstance();
+    pubsub.subscribe("candle", [](void* data) {
+        Candle* candle = static_cast<Candle*>(data);
+        std::cout << "Received candle: " << *candle << std::endl;
+    });
+    pubsub.subscribe("candle_end", [](void* data) {
+        std::cout << "Candle publishing ended." << std::endl;
+    });
+    candle_reader.publish(utils::get_timestamp("2025-03-20 00:00:10"), utils::get_timestamp("2025-03-20 00:00:15"));
+}
+
+void test_candle_publishing_live_averaging() {
+    CandleReader candle_reader("btcusdt", 1);
+    PubSub& pubsub = PubSub::getInstance();
+    statistics::LiveAvgPeriodic live_avg(3);
+
+    size_t count = 0;
+
+    pubsub.subscribe("candle", [&live_avg, &count](void* data) {
+        Candle* candle = static_cast<Candle*>(data);
+        // std::cout << "Received candle: " << *candle << std::endl;
+        count++;
+
+        cout << "live_avg -> sum: " << live_avg.sum << ", mean: " << live_avg.mean << ", is_empty: " << live_avg.buffer.empty() << ", is_full: " << live_avg.buffer.full() << ", size: " << live_avg.buffer.size() << endl;
+        live_avg.push(candle->vwap);
+
+        cout << "-----------------" << endl;
+    });
+    pubsub.subscribe("candle_end", [](void* data) {
+        std::cout << "Candle publishing ended." << std::endl;
+    });
+    candle_reader.publish(utils::get_timestamp("2025-03-20 00:00:10"), utils::get_timestamp("2025-03-20 00:00:15"));
+}
+
 int main() {
     // test1();
     // write_candles_trades_to_binary_file();
     // read_candles_from_binary_file("btcusdt", utils::get_timestamp("2025-03-20 00:00:10"), utils::get_timestamp("2025-03-20 00:00:15"));
 
-    test_candles_integrity_check("btcusdt");
-    test_candles_integrity_check("ethusdt");
-    test_candles_integrity_check("xrpusdt");
-    test_candles_integrity_check("adausdt");
-    test_candles_integrity_check("dogeusdt");
-    test_candles_integrity_check("trumpusdt");
-    test_candles_integrity_check("vineusdt");
-    
+    // Candles Integrity check
+    // test_candles_integrity_check("btcusdt");
+    // test_candles_integrity_check("ethusdt");
+    // test_candles_integrity_check("xrpusdt");
+    // test_candles_integrity_check("adausdt");
+    // test_candles_integrity_check("dogeusdt");
+    // test_candles_integrity_check("trumpusdt");
+    // test_candles_integrity_check("vineusdt");
+
+    // test Candles pricing for chart
+    // create_file_for_chart("btcusdt", utils::get_timestamp("2025-03-20 00:00:10"), utils::get_timestamp("2025-03-21 00:01:10"));
+
+    test_candle_publishing_live_averaging();
 
     return 0;
 }

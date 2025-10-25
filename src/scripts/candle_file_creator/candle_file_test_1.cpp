@@ -117,7 +117,7 @@ int main() {
     // std::cout << std::endl;
     // test_download_binance_trade_data("vineusdt", 2025, 8, 15);
     // test_publish_trades_from_csv_file("vineusdt", 2025, 8, 15);
-    test_publish_trades_from_csv_file_and_write_candles("vineusdt", 2025, 8, 18);
+    // test_publish_trades_from_csv_file_and_write_candles("vineusdt", 2025, 8, 18);
     test_candles_binary_file("vineusdt");
 
 

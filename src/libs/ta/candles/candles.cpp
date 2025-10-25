@@ -4,8 +4,10 @@
 #include <fstream>
 #include <cstdlib> 
 #include "../../core/config/config.hpp"
+#include "../../core/pubsub/pubsub.hpp"
 #include "../../utils/string_utils.hpp"
 #include "../../utils/file_utils.hpp"
+
 
 
 std::ostream& operator<<(std::ostream& os, const Candle& candle) {
@@ -384,8 +386,29 @@ void CandleReader::set_end(size_t end_index) {
     this->end = end_index;
 }
 
+size_t CandleReader::ts_to_index(size_t timestamp) {
+    if (timestamp < this->first_ts) {
+        return 0;
+    }
+    if (timestamp > this->last_ts) {
+        return this->size - 1;
+    }
+    return (timestamp - this->first_ts) / (this->timeframe * 1000);
+}
 
-
+void CandleReader::publish(size_t start_ts, size_t end_ts) {
+    if (start_ts == 0) start_ts = this->first_ts;
+    if (end_ts == 0) end_ts = this->last_ts;
+    PubSub& pubsub = PubSub::getInstance();
+    this->start = this->ts_to_index(start_ts);
+    this->end = this->ts_to_index(end_ts);
+    this->go(this->start);
+    while (this->index <= this->end) {
+        this->read_next();
+        pubsub.publish("candle", (void*)&this->current_candle);
+    }
+    pubsub.publish("candle_end", nullptr);
+}
 
 // Candles methods
 
@@ -512,7 +535,7 @@ void CandlesVector::build_from_trade_vector(const std::vector<Trade>& trades) {
 }
 
 
-void CandlesVector::write_to_binary_file(const std::string& file_path_name) {
+void CandlesVector::write_to_binary_file(const std::string& file_path_name, string mode) {
     std::ofstream candle_data(file_path_name, std::ios::out | std::ios::binary); // Open the binary file for writing
     if (!candle_data.is_open()) {
         std::cout << "Error: Could not open file for writing candles: " << file_path_name << std::endl;
@@ -520,20 +543,44 @@ void CandlesVector::write_to_binary_file(const std::string& file_path_name) {
     }
     for (const auto& candle : *this) {
         // write fields one by one to ensure no padding issues
-        candle_data.write(reinterpret_cast<const char*>(&candle.timeframe), sizeof(candle.timeframe));
-        candle_data.write(reinterpret_cast<const char*>(&candle.t), sizeof(candle.t));
-        candle_data.write(reinterpret_cast<const char*>(&candle.o), sizeof(candle.o));
-        candle_data.write(reinterpret_cast<const char*>(&candle.h), sizeof(candle.h));
-        candle_data.write(reinterpret_cast<const char*>(&candle.l), sizeof(candle.l));
-        candle_data.write(reinterpret_cast<const char*>(&candle.c), sizeof(candle.c));
-        candle_data.write(reinterpret_cast<const char*>(&candle.vwap), sizeof(candle.vwap));
-        candle_data.write(reinterpret_cast<const char*>(&candle.n), sizeof(candle.n));
-        candle_data.write(reinterpret_cast<const char*>(&candle.v), sizeof(candle.v));
-        candle_data.write(reinterpret_cast<const char*>(&candle.vs), sizeof(candle.vs));
-        candle_data.write(reinterpret_cast<const char*>(&candle.vb), sizeof(candle.vb));
-        candle_data.write(reinterpret_cast<const char*>(&candle.q), sizeof(candle.q));
-        candle_data.write(reinterpret_cast<const char*>(&candle.qs), sizeof(candle.qs));
-        candle_data.write(reinterpret_cast<const char*>(&candle.qb), sizeof(candle.qb));
+        if (mode == "full") {
+            // candle_data.write(reinterpret_cast<const char*>(&candle.timeframe), sizeof(candle.timeframe));
+            candle_data.write(reinterpret_cast<const char*>(&candle.t), sizeof(candle.t));
+            candle_data.write(reinterpret_cast<const char*>(&candle.o), sizeof(candle.o));
+            candle_data.write(reinterpret_cast<const char*>(&candle.h), sizeof(candle.h));
+            candle_data.write(reinterpret_cast<const char*>(&candle.l), sizeof(candle.l));
+            candle_data.write(reinterpret_cast<const char*>(&candle.c), sizeof(candle.c));
+            candle_data.write(reinterpret_cast<const char*>(&candle.vwap), sizeof(candle.vwap));
+            candle_data.write(reinterpret_cast<const char*>(&candle.n), sizeof(candle.n));
+            candle_data.write(reinterpret_cast<const char*>(&candle.v), sizeof(candle.v));
+            candle_data.write(reinterpret_cast<const char*>(&candle.vs), sizeof(candle.vs));
+            candle_data.write(reinterpret_cast<const char*>(&candle.vb), sizeof(candle.vb));
+            candle_data.write(reinterpret_cast<const char*>(&candle.q), sizeof(candle.q));
+            candle_data.write(reinterpret_cast<const char*>(&candle.qs), sizeof(candle.qs));
+            candle_data.write(reinterpret_cast<const char*>(&candle.qb), sizeof(candle.qb));
+        }
+        else if (mode == "tohlcv") {
+            candle_data.write(reinterpret_cast<const char*>(&candle.t), sizeof(candle.t));
+            candle_data.write(reinterpret_cast<const char*>(&candle.o), sizeof(candle.o));
+            candle_data.write(reinterpret_cast<const char*>(&candle.h), sizeof(candle.h));
+            candle_data.write(reinterpret_cast<const char*>(&candle.l), sizeof(candle.l));
+            candle_data.write(reinterpret_cast<const char*>(&candle.c), sizeof(candle.c));
+            candle_data.write(reinterpret_cast<const char*>(&candle.v), sizeof(candle.v));
+        }
+        else if (mode == "thlpv") {
+            // t,h,l,vwap,v
+            candle_data.write(reinterpret_cast<const char*>(&candle.t), sizeof(candle.t));
+            candle_data.write(reinterpret_cast<const char*>(&candle.h), sizeof(candle.h));
+            candle_data.write(reinterpret_cast<const char*>(&candle.l), sizeof(candle.l));
+            candle_data.write(reinterpret_cast<const char*>(&candle.vwap), sizeof(candle.vwap));
+            candle_data.write(reinterpret_cast<const char*>(&candle.v), sizeof(candle.v));
+        }
+        else if (mode == "tpv") {
+            // t, vwap, v
+            candle_data.write(reinterpret_cast<const char*>(&candle.t), sizeof(candle.t));
+            candle_data.write(reinterpret_cast<const char*>(&candle.vwap), sizeof(candle.vwap));
+            candle_data.write(reinterpret_cast<const char*>(&candle.v), sizeof(candle.v));
+        }
     }
     candle_data.close(); // Close the file after writing
 }

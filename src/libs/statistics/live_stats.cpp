@@ -69,3 +69,20 @@ void statistics::LiveStatsFixed::reset() {
     reset_values();
 }
 
+statistics::LiveAvgPeriodic::LiveAvgPeriodic(size_t period) : period(period), buffer(period) {}
+
+void statistics::LiveAvgPeriodic::push(double value) {
+    sum += value;
+    if (buffer.full()) sum -= buffer.front();
+    buffer.push_back(value);
+    mean = sum / buffer.size();
+}
+
+void statistics::LiveAvgPeriodic::reset() {
+    sum = 0.0;
+    buffer.clear();
+}
+
+
+
+

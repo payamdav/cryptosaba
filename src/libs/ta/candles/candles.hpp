@@ -95,6 +95,8 @@ class CandleReader {
         bool read(Candle& candle, size_t index);
         void set_start(size_t start_index);
         void set_end(size_t end_index);
+        size_t ts_to_index(size_t timestamp);
+        void publish(size_t start_ts=0, size_t end_ts=0);
 
 };
 
@@ -133,7 +135,7 @@ class CandlesVector : public std::vector<Candle> {
         void push(const Candle& candle); // push new candle ( only one second candles are allowed )
         void push(const Trade& trade); // push new trade ( will create new candles as needed )
         void build_from_trade_vector(const std::vector<Trade>& trades);
-        void write_to_binary_file(const std::string& file_path_name);
+        void write_to_binary_file(const std::string& file_path_name, string mode="full");
         void report_candles_integrity(const std::string& file_path_name, size_t start_ts=0, size_t end_ts=0);
         void read_from_binary_file(const std::string& file_path_name, size_t start_ts=0, size_t end_ts=0);
 };

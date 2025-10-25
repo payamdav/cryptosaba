@@ -40,5 +40,17 @@ namespace statistics {
             void reset();
     };
 
+    class LiveAvgPeriodic {
+        public:
+            double sum = 0.0;
+            double mean = 0.0;
+            size_t period;
+            boost::circular_buffer<double> buffer;
+
+            LiveAvgPeriodic(size_t period=10);
+            void push(double value);
+            void reset();
+    };
+
 } // namespace statistics
 

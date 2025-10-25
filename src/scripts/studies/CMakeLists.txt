@@ -1,0 +1,2 @@
+add_executable(high_volume_nodes high_volume_nodes.cpp)
+target_link_libraries(high_volume_nodes utils pubsub config candles statistics)
