@@ -1,11 +1,14 @@
 #include <cstddef>
 #include <iostream>
 #include <string>
+#include <vector>
 #include "../../libs/utils//datetime_utils.hpp"
 #include "../../libs/utils//file_utils.hpp"
 #include "../../libs/binance//binance.hpp"
 #include "../../libs/ta/candles//candles.hpp"
 #include "../../libs/core/pubsub//pubsub.hpp"
+#include "../../libs/core/config//config.hpp"
+
 
 using namespace std;
 
@@ -66,8 +69,19 @@ int main(int argc, char* argv[]) {
         int start_month = stoi(argv[3]);
         int end_year = stoi(argv[4]);
         int end_month = stoi(argv[5]);
-        create_candle_file_by_monthly_files(symbol, start_year, start_month, end_year, end_month);
-        test_candles_binary_file(symbol);
+        if (symbol == "all") {
+            vector<string> symbols = Config::getInstance().get_csv_strings("symbols");
+            for (const auto& sym : symbols) {
+                create_candle_file_by_monthly_files(sym, start_year, start_month, end_year, end_month);
+                test_candles_binary_file(sym);
+                cout << "------------------------------------------------------------" << endl;
+            }
+        }
+        else {
+            create_candle_file_by_monthly_files(symbol, start_year, start_month, end_year, end_month);
+            test_candles_binary_file(symbol);
+            cout << "------------------------------------------------------------" << endl;
+        }
     }
     else if (argc == 8) { // <symbol> <start_year> <start_month> <start_day> <end_year> <end_month> <end_day>
         string symbol = argv[1];
@@ -77,8 +91,19 @@ int main(int argc, char* argv[]) {
         int end_year = stoi(argv[5]);
         int end_month = stoi(argv[6]);
         int end_day = stoi(argv[7]);
-        create_candle_file_by_daily_files(symbol, start_year, start_month, start_day, end_year, end_month, end_day);
-        test_candles_binary_file(symbol);
+        if (symbol == "all") {
+            vector<string> symbols = Config::getInstance().get_csv_strings("symbols");
+            for (const auto& sym : symbols) {
+                create_candle_file_by_daily_files(sym, start_year, start_month, start_day, end_year, end_month, end_day);
+                test_candles_binary_file(sym);
+                cout << "------------------------------------------------------------" << endl;
+            }
+        }
+        else {
+            create_candle_file_by_daily_files(symbol, start_year, start_month, start_day, end_year, end_month, end_day);
+            test_candles_binary_file(symbol);
+            cout << "------------------------------------------------------------" << endl;
+        }
     }
     else {
         std::cout << "Usage: " << argv[0] << " <symbol> <start_year> <start_month> <end_year> <end_month>" << std::endl;

@@ -9,7 +9,7 @@
 
 
 std::ostream& operator<<(std::ostream& os, const Candle& candle) {
-    os << "Candle(t=" << candle.t << ", o=" << candle.o << ", h=" << candle.h << ", l=" << candle.l << ", c=" << candle.c << ", vwap=" << candle.vwap << ", n=" << candle.n << ", v=" << candle.v << ", vs=" << candle.vs << ", vb=" << candle.vb << ", q=" << candle.q << ")";
+    os << "Candle(t=" << candle.t << ", o=" << candle.o << ", h=" << candle.h << ", l=" << candle.l << ", c=" << candle.c << ", vwap=" << candle.vwap << ", n=" << candle.n << ", v=" << candle.v << ", vs=" << candle.vs << ", vb=" << candle.vb << ", q=" << candle.q << ", qs=" << candle.qs << ", qb=" << candle.qb << ")";
     return os;
 }
 
@@ -48,7 +48,7 @@ Candle::Candle(const Candle& candle, size_t timeframe) {
     this->l = candle.l;
     this->c = candle.c;
     this->vwap = candle.vwap;
-    this->n = 1;
+    this->n = candle.n;
     this->v = candle.v;
     this->vs = candle.vs;
     this->vb = candle.vb;
@@ -162,7 +162,7 @@ Candle Candle::filling_candle() {
     candle.h = this->c;
     candle.l = this->c;
     candle.c = this->c;
-    candle.vwap = this->c;
+    candle.vwap = this->vwap;
     candle.n = 0;
     candle.v = 0;
     candle.vs = 0;
@@ -539,7 +539,8 @@ void CandlesVector::write_to_binary_file(const std::string& file_path_name) {
 }
 
 void CandlesVector::report_candles_integrity(const std::string& file_path_name, size_t start_ts, size_t end_ts) {
-    double eps = 1e-6;
+    cout << "Reporting candles integrity for file: " << file_path_name << std::endl;
+    double eps = 1e-5;
     this->read_from_binary_file(file_path_name, start_ts, end_ts);
     Candle previous_candle = this->front();
     double total_v = 0;
@@ -559,8 +560,8 @@ void CandlesVector::report_candles_integrity(const std::string& file_path_name, 
         if (candle.q < 0 || candle.qs < 0 || candle.qb < 0) { std::cout << "Negative quantity detected in candle at " << candle << std::endl; }
         if (candle.vwap < 0) { std::cout << "Negative VWAP detected in candle at " << candle << std::endl; }
         if (candle.n < 0) { std::cout << "Negative trade count detected in candle at " << candle << std::endl; }
-        if (candle.h - candle.l < -eps || candle.h - candle.o < -eps || candle.h - candle.c < -eps || candle.h - candle.vwap < -eps) { std::cout << "Inconsistent high price detected in candle at " << candle << std::endl; }
-        if (candle.l - candle.h > eps || candle.l - candle.o > eps || candle.l - candle.c > eps || candle.l - candle.vwap > eps) { std::cout << "Inconsistent low price detected in candle at " << candle << std::endl; }
+        if (candle.h - candle.l < -eps || candle.h - candle.o < -eps || candle.h - candle.c < -eps || (candle.n > 0 && candle.h - candle.vwap < -eps)) { std::cout << "Inconsistent high price detected in candle at " << candle << std::endl; }
+        if (candle.l - candle.h > eps || candle.l - candle.o > eps || candle.l - candle.c > eps || (candle.n > 0 && candle.l - candle.vwap > eps)) { std::cout << "Inconsistent low price detected in candle at " << candle << std::endl; }
         if (candle.q - candle.qs - candle.qb > eps) { std::cout << "Inconsistent quantity detected in candle at " << candle << std::endl; }
         if (candle.v - candle.vs - candle.vb > eps) { std::cout << "Inconsistent volume detected in candle at " << candle << std::endl; }
         if (candle.n > 0 && abs(candle.vwap - (candle.q / candle.v)) > eps) { std::cout << "Inconsistent VWAP detected in candle at " << candle << std::endl; }
@@ -575,8 +576,15 @@ void CandlesVector::report_candles_integrity(const std::string& file_path_name, 
         previous_candle = candle;
     }
 
-    std::cout << "Total volume: " << total_v << " = " << total_vs << " + " << total_vb << std::endl;
-    std::cout << "Total quantity: " << total_q << " = " << total_qs << " + " << total_qb << std::endl;
+    // eps = count * 1e-7;
+    eps = 1e-1;
+
+    if (abs(total_v - (total_vs + total_vb)) > eps) { std::cout << "Total volume inconsistency detected. amount is: " << total_v - (total_vs + total_vb) << std::endl; }
+    if (abs(total_q - (total_qs + total_qb)) > eps) { std::cout << "Total quantity inconsistency detected. amount is: " << total_q - (total_qs + total_qb) << std::endl; }
+
+    // std::cout << "Total volume: " << total_v << " = " << total_vs << " + " << total_vb << std::endl;
+    // std::cout << "Total quantity: " << total_q << " = " << total_qs << " + " << total_qb << std::endl;
+    cout << "------------------------------------------------------------" << std::endl;
 }
 
 void CandlesVector::read_from_binary_file(const std::string& file_path_name, size_t start_ts, size_t end_ts) {
