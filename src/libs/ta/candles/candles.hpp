@@ -137,5 +137,5 @@ class CandlesVector : public std::vector<Candle> {
         void build_from_trade_vector(const std::vector<Trade>& trades);
         void write_to_binary_file(const std::string& file_path_name, string mode="full");
         void report_candles_integrity(const std::string& file_path_name, size_t start_ts=0, size_t end_ts=0);
-        void read_from_binary_file(const std::string& file_path_name, size_t start_ts=0, size_t end_ts=0);
+        void read_from_binary_file(const std::string& symbol, size_t start_ts=0, size_t end_ts=0);
 };

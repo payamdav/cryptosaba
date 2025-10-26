@@ -1,2 +1,5 @@
 add_executable(high_volume_nodes high_volume_nodes.cpp)
 target_link_libraries(high_volume_nodes utils pubsub config candles statistics)
+
+add_executable(snapshot_analyze snapshot_analyze.cpp)
+target_link_libraries(snapshot_analyze snapshot_analyze_lib utils pubsub config candles statistics)

@@ -35,8 +35,10 @@ add_subdirectory(src/libs/ta/volumebox)
 add_subdirectory(src/libs/ta/linear_regression)
 # add_subdirectory(src/libs/ta/vnode)
 add_subdirectory(src/libs/ta/lowess)
+add_subdirectory(src/libs/ta/segmented_weighted_linear_regression)
 add_subdirectory(src/libs/binance)
 
+add_subdirectory(src/studies/snapshot_analyze)
 
 add_subdirectory(src/scripts/tests)
 add_subdirectory(src/scripts/market_anal)

@@ -107,3 +107,43 @@ Tests validate:
 - Candle aggregation correctness across timeframes
 - Technical indicator calculations
 - Market simulation order execution logic
+
+## Related Projects
+
+### jmarket1 - Visualization Library
+
+**Location**: `../jmarket1` (relative to cryptosaba root)
+
+**Purpose**: JavaScript/TypeScript visualization library for rendering market data charts and analysis results from cryptosaba
+
+**Tech Stack**:
+- **SciChart** - High-performance WebGL charting library (v4.0.890)
+- **esbuild** - Module bundler for development and production builds
+- **ES Modules** - Modern JavaScript module system
+
+**Project Structure**:
+- `index.html` - Main HTML file (root of project)
+- `src/index.js` - JavaScript entry point
+- `src/` - Source code
+  - `chart/` - Chart components and configurations
+  - `elements/` - UI elements
+  - `lib/` - Library utilities
+  - `scenarios/` - Different visualization scenarios
+  - `config.js` - Configuration
+- `js/` - Build output directory (bundled files)
+- `css/` - Stylesheets
+- `images/` - Image assets
+
+**Build Commands**:
+- `npm run build` - Build for production
+- `npm run bw` - Build and watch for development (with sourcemaps)
+
+**Data Integration**:
+- Consumes binary data exported from cryptosaba studies (e.g., snapshot_analyze)
+- Reads candle data, normalized volumes, and scaled prices
+- Metadata from CSV files
+
+**Development Notes**:
+- When working on both projects, use absolute paths for jmarket1: `/home/payam/projects/jmarket1/`
+- Binary data files are written to cryptosaba's `config.files_path` directory
+- jmarket1 reads these files for visualization

@@ -634,9 +634,9 @@ void CandlesVector::report_candles_integrity(const std::string& file_path_name, 
     cout << "------------------------------------------------------------" << std::endl;
 }
 
-void CandlesVector::read_from_binary_file(const std::string& file_path_name, size_t start_ts, size_t end_ts) {
+void CandlesVector::read_from_binary_file(const std::string& symbol, size_t start_ts, size_t end_ts) {
     this->clear();
-    CandleReader reader(file_path_name);
+    CandleReader reader(symbol);
     if (start_ts == 0) start_ts = reader.first_ts;
     if (end_ts == 0) end_ts = reader.last_ts;
     reader.go_to_timestamp(start_ts);

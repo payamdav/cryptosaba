@@ -1,0 +1,1 @@
+add_library(segmented_weighted_linear_regression SHARED segmented_weighted_linear_regression.cpp)

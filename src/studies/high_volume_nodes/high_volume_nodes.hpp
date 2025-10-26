@@ -14,7 +14,7 @@
 
 using namespace std;
 
-void find_high_volume_nodes() {
+inline void find_high_volume_nodes() {
     Config &config = Config::getInstance();
     PubSub &pubsub = PubSub::getInstance();
     string symbol = config.get("symbol");
@@ -69,5 +69,10 @@ void find_high_volume_nodes() {
     }
 
     cout << endl;
+
+    // TODO: Implement high volume nodes detection logic here
+    // definition of this function is not finished yet but postponed for later
+
+    
 }
 
