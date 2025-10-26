@@ -23,7 +23,10 @@ public:
 
     double current_vwap;
     double avg_candle_size_1w;
+    double avg_candle_size_to_pips;
     double avg_volume_1w;
+    double pips_threshold_for_segmentation;
+    double max_error_for_segments;
     vector<double> volume_normalized;        // l1d normalized volumes
     vector<double> prices_offsetted_scaled;  // l1d offsetted/scaled prices
     vector<double> l1dn1d_volume_normalized;       // l1dn1d normalized volumes

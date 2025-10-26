@@ -8,7 +8,8 @@
 SnapshotAnalyze::SnapshotAnalyze(const string& symbol, size_t ts_seconds)
     : symbol(symbol), ts_seconds(ts_seconds), ts_ms(ts_seconds * 1000),
       l7d(1), l1d(1), n1d(1), l1dn1d(1),
-      current_vwap(0), avg_candle_size_1w(0), avg_volume_1w(0) {
+      current_vwap(0), avg_candle_size_1w(0), avg_candle_size_to_pips(0), avg_volume_1w(0),
+      pips_threshold_for_segmentation(30), max_error_for_segments(0) {
 }
 
 void SnapshotAnalyze::load_candles() {
@@ -49,14 +50,16 @@ void SnapshotAnalyze::set_current_vwap() {
 }
 
 void SnapshotAnalyze::calculate_avg_candle_size() {
-    if (l7d.empty()) {
+    if (l7d.empty() || current_vwap == 0) {
         avg_candle_size_1w = 0;
+        avg_candle_size_to_pips = 0;
         return;
     }
 
     auto candle_sizes = l7d | std::views::transform([](const Candle& c) { return c.h - c.l; });
     avg_candle_size_1w = std::reduce(candle_sizes.begin(), candle_sizes.end(), 0.0) / l7d.size();
-    cout << "Average candle size (1w): " << avg_candle_size_1w << endl;
+    avg_candle_size_to_pips = (avg_candle_size_1w / current_vwap) * 10000;
+    cout << "Average candle size (1w): " << avg_candle_size_1w << " (" << avg_candle_size_to_pips << " pips)" << endl;
 }
 
 void SnapshotAnalyze::calculate_avg_volume() {
@@ -118,8 +121,13 @@ void SnapshotAnalyze::analyze() {
 
 void SnapshotAnalyze::calculate_segments() {
     if (prices_offsetted_scaled.empty() || volume_normalized.empty()) return;
+    if (current_vwap == 0 || avg_candle_size_1w == 0) return;
 
-    SegmentedWeightedLinearRegression reg(prices_offsetted_scaled, volume_normalized, 20);
+    // Calculate max_error from pips threshold
+    max_error_for_segments = (pips_threshold_for_segmentation * current_vwap) / (10000.0 * avg_candle_size_1w);
+    cout << "Max error for segments (from " << pips_threshold_for_segmentation << " pips): " << max_error_for_segments << endl;
+
+    SegmentedWeightedLinearRegression reg(prices_offsetted_scaled, volume_normalized, max_error_for_segments);
     segments = reg.segments;
 
     cout << "Segments (volume-weighted): " << segments.size() << endl;
@@ -136,8 +144,10 @@ void SnapshotAnalyze::print_summary() {
     cout << "  l1dn1d: " << l1dn1d.size() << endl;
     cout << "\nMetrics:" << endl;
     cout << "  Current vwap: " << current_vwap << endl;
-    cout << "  Avg candle size (1w): " << avg_candle_size_1w << endl;
+    cout << "  Avg candle size (1w): " << avg_candle_size_1w << " (" << avg_candle_size_to_pips << " pips)" << endl;
     cout << "  Avg volume (1w): " << avg_volume_1w << endl;
+    cout << "  Pips threshold for segmentation: " << pips_threshold_for_segmentation << endl;
+    cout << "  Max error for segments: " << max_error_for_segments << endl;
 
     cout << "\n=== Segments Volume-Weighted (" << segments.size() << ") ===" << endl;
     for (size_t i = 0; i < segments.size(); i++) {
@@ -176,13 +186,16 @@ void SnapshotAnalyze::export_to_binary() {
     // Export metadata (CSV format)
     string metadata_file = base_path + "snapshot_metadata.csv";
     ofstream meta_stream(metadata_file);
-    meta_stream << "symbol,ts_ms,ts_datetime,current_vwap,avg_candle_size_1w,avg_volume_1w\n";
+    meta_stream << "symbol,ts_ms,ts_datetime,current_vwap,avg_candle_size_1w,avg_candle_size_to_pips,avg_volume_1w,pips_threshold_for_segmentation,max_error_for_segments\n";
     meta_stream << symbol << ","
                 << ts_ms << ","
                 << utils::get_utc_datetime_string(ts_ms) << ","
                 << current_vwap << ","
                 << avg_candle_size_1w << ","
-                << avg_volume_1w << "\n";
+                << avg_candle_size_to_pips << ","
+                << avg_volume_1w << ","
+                << pips_threshold_for_segmentation << ","
+                << max_error_for_segments << "\n";
     meta_stream.close();
     cout << "Exported metadata to: " << metadata_file << endl;
     cout << "\nAll files exported successfully!" << endl;
