@@ -10,6 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Minimal verification - build/test only at end or when failures occur
 - Trust the code and execute quickly
 - Skip unnecessary exploration when the path is obvious
+- Always connect to IDE at start of session
 
 **Project Scope:**
 - Full understanding and access to both cryptosaba (C++) and jmarket1 (JavaScript) projects required
