@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Working Style
+
+**Fast mode by default:**
+- No TodoWrite unless explicitly requested or for complex multi-step tasks
+- Direct edits without excessive file reading when context is clear
+- Minimal verification - build/test only at end or when failures occur
+- Trust the code and execute quickly
+- Skip unnecessary exploration when the path is obvious
+
 ## Project Overview
 
 This is a C++23 cryptocurrency market analysis and trading system ("cryptosaba") focused on technical analysis and trade data processing. The codebase processes historical trade data, performs various technical analysis calculations, and supports simulated market order execution.
