@@ -11,6 +11,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Trust the code and execute quickly
 - Skip unnecessary exploration when the path is obvious
 
+**Project Scope:**
+- Full understanding and access to both cryptosaba (C++) and jmarket1 (JavaScript) projects required
+- jmarket1 visualization project location: `/home/payam/projects/jmarket1/`
+- No permission needed for any file operations in either project
+- Work seamlessly across both codebases as they are tightly integrated
+
 ## Project Overview
 
 This is a C++23 cryptocurrency market analysis and trading system ("cryptosaba") focused on technical analysis and trade data processing. The codebase processes historical trade data, performs various technical analysis calculations, and supports simulated market order execution.
