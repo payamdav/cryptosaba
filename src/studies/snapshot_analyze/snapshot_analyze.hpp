@@ -3,6 +3,7 @@
 #include "../../libs/utils/datetime_utils.hpp"
 #include "../../libs/statistics/live_stats.hpp"
 #include "../../libs/ta/segmented_weighted_linear_regression/segmented_weighted_linear_regression.hpp"
+#include "../../libs/ta/lowess/lowess.hpp"
 #include <string>
 #include <vector>
 #include <cstddef>
@@ -31,6 +32,8 @@ public:
     vector<double> prices_offsetted_scaled;  // l1d offsetted/scaled prices
     vector<double> l1dn1d_volume_normalized;       // l1dn1d normalized volumes
     vector<double> l1dn1d_prices_offsetted_scaled; // l1dn1d offsetted/scaled prices
+    vector<LowessResult> l1dn1d_lowess_smoothed;   // l1dn1d LOWESS smoothed prices
+    long long lowess_half_neighbor;                // configurable, default 900
 
     vector<LinearSegment> segments;            // volume-weighted
 
@@ -54,4 +57,5 @@ private:
     void offset_and_scale_prices();
     void set_current_vwap();
     void calculate_segments();
+    void calculate_lowess_smoothing();
 };

@@ -9,7 +9,7 @@ SnapshotAnalyze::SnapshotAnalyze(const string& symbol, size_t ts_seconds)
     : symbol(symbol), ts_seconds(ts_seconds), ts_ms(ts_seconds * 1000),
       l7d(1), l1d(1), n1d(1), l1dn1d(1),
       current_vwap(0), avg_candle_size_1w(0), avg_candle_size_to_pips(0), avg_volume_1w(0),
-      pips_threshold_for_segmentation(30), max_error_for_segments(0) {
+      pips_threshold_for_segmentation(30), max_error_for_segments(0), lowess_half_neighbor(900) {
 }
 
 void SnapshotAnalyze::load_candles() {
@@ -117,6 +117,7 @@ void SnapshotAnalyze::analyze() {
     normalize_volumes();
     offset_and_scale_prices();
     calculate_segments();
+    calculate_lowess_smoothing();
 }
 
 void SnapshotAnalyze::calculate_segments() {
@@ -131,6 +132,29 @@ void SnapshotAnalyze::calculate_segments() {
     segments = reg.segments;
 
     cout << "Segments (volume-weighted): " << segments.size() << endl;
+}
+
+void SnapshotAnalyze::calculate_lowess_smoothing() {
+    if (l1dn1d_prices_offsetted_scaled.empty() || l1dn1d_volume_normalized.empty()) return;
+
+    // Extract timestamps from l1dn1d candles
+    vector<size_t> timestamps;
+    timestamps.reserve(l1dn1d.size());
+    for (const auto& candle : l1dn1d) {
+        timestamps.push_back(candle.t);
+    }
+
+    cout << "Calculating LOWESS smoothing for l1dn1d with half_neighbor=" << lowess_half_neighbor << endl;
+    l1dn1d_lowess_smoothed = lowess(l1dn1d_prices_offsetted_scaled, l1dn1d_volume_normalized, timestamps, lowess_half_neighbor);
+    cout << "LOWESS smoothing completed: " << l1dn1d_lowess_smoothed.size() << " points" << endl;
+
+    // Debug: print scaled_price, volume_normalized, and lowess smoothed for indices 110330 to 110380
+    cout << "\n=== Debug: Scaled Prices, Normalized Volumes, and LOWESS Smoothed (indices 110330-110380) ===" << endl;
+    for (size_t i = 110330; i <= 110380 && i < l1dn1d_prices_offsetted_scaled.size(); i++) {
+        cout << "  [" << i << "] scaled_price: " << l1dn1d_prices_offsetted_scaled[i]
+             << " volume_normalized: " << l1dn1d_volume_normalized[i]
+             << " lowess_smoothed: " << l1dn1d_lowess_smoothed[i].y << endl;
+    }
 }
 
 void SnapshotAnalyze::print_summary() {
@@ -148,6 +172,8 @@ void SnapshotAnalyze::print_summary() {
     cout << "  Avg volume (1w): " << avg_volume_1w << endl;
     cout << "  Pips threshold for segmentation: " << pips_threshold_for_segmentation << endl;
     cout << "  Max error for segments: " << max_error_for_segments << endl;
+    cout << "  LOWESS half_neighbor: " << lowess_half_neighbor << endl;
+    cout << "  LOWESS smoothed points: " << l1dn1d_lowess_smoothed.size() << endl;
 
     cout << "\n=== Segments Volume-Weighted (" << segments.size() << ") ===" << endl;
     for (size_t i = 0; i < segments.size(); i++) {
@@ -183,10 +209,17 @@ void SnapshotAnalyze::export_to_binary() {
     prices_stream.close();
     cout << "Exported l1dn1d offsetted/scaled prices to: " << prices_file << endl;
 
+    // Export l1dn1d LOWESS smoothed data
+    if (!l1dn1d_lowess_smoothed.empty()) {
+        string lowess_file = base_path + "snapshot_l1dn1d_lowess_smoothed.bin";
+        save_lowess_results_to_binary_file(lowess_file, l1dn1d_lowess_smoothed);
+        cout << "Exported l1dn1d LOWESS smoothed to: " << lowess_file << endl;
+    }
+
     // Export metadata (CSV format)
     string metadata_file = base_path + "snapshot_metadata.csv";
     ofstream meta_stream(metadata_file);
-    meta_stream << "symbol,ts_ms,ts_datetime,current_vwap,avg_candle_size_1w,avg_candle_size_to_pips,avg_volume_1w,pips_threshold_for_segmentation,max_error_for_segments\n";
+    meta_stream << "symbol,ts_ms,ts_datetime,current_vwap,avg_candle_size_1w,avg_candle_size_to_pips,avg_volume_1w,pips_threshold_for_segmentation,max_error_for_segments,lowess_half_neighbor\n";
     meta_stream << symbol << ","
                 << ts_ms << ","
                 << utils::get_utc_datetime_string(ts_ms) << ","
@@ -195,7 +228,8 @@ void SnapshotAnalyze::export_to_binary() {
                 << avg_candle_size_to_pips << ","
                 << avg_volume_1w << ","
                 << pips_threshold_for_segmentation << ","
-                << max_error_for_segments << "\n";
+                << max_error_for_segments << ","
+                << lowess_half_neighbor << "\n";
     meta_stream.close();
     cout << "Exported metadata to: " << metadata_file << endl;
     cout << "\nAll files exported successfully!" << endl;

@@ -68,6 +68,66 @@ vector<LowessResult> lowess(const CandlesVector& candles, long long half_neighbo
     return results;
 }
 
+// LOWESS implementation that works with vector<double> for y values and weights
+LowessResult lowess(const vector<double>& y_values, const vector<double>& weights, const vector<size_t>& timestamps, long long half_neighbors_count, long long index) {
+    long long values_count = y_values.size();
+    int number_of_neighbors = half_neighbors_count * 2 + 1;
+    long long n_right = index + half_neighbors_count;
+    if (n_right >= values_count - 1) {
+        n_right = values_count - 1;
+    }
+    long long n_left = n_right - number_of_neighbors + 1;
+    if (n_left < 0) {
+        n_left = 0;
+    }
+    double d_max = n_right - index > index - n_left ? n_right - index : index - n_left;
+
+    // Calculate distance weights using tricubic weight function
+    vector<double> distance_weights(number_of_neighbors);
+    for (long long i = n_left; i <= n_right; ++i) {
+        double d = (double)((double)index - i) / d_max;
+        if (d < 0.0) d = -d;
+        distance_weights[i - n_left] = 1.0 - d * d * d;
+        distance_weights[i - n_left] = distance_weights[i - n_left] * distance_weights[i - n_left] * distance_weights[i - n_left];
+    }
+
+    // Weighted linear regression
+    double sum_w = 0.0;
+    double sum_wx = 0.0;
+    double sum_wy = 0.0;
+    double sum_wxx = 0.0;
+    double sum_wxy = 0.0;
+    for (long long i = n_left; i <= n_right; ++i) {
+        double x = (double)i;
+        double y = y_values[i];
+        double w = distance_weights[i - n_left] * weights[i]; // distance weight * normalized volume
+        sum_w += w;
+        sum_wx += w * x;
+        sum_wy += w * y;
+        sum_wxx += w * x * x;
+        sum_wxy += w * x * y;
+    }
+    double denom = sum_w * sum_wxx - sum_wx * sum_wx;
+    if (denom != 0.0) {
+        double b = (sum_w * sum_wxy - sum_wx * sum_wy) / denom;
+        double a = (sum_wy - b * sum_wx) / sum_w;
+        double y = a + b * index;
+        return LowessResult(timestamps[index], y, sum_w);
+    }
+    cerr << "Warning: all x are the same, using average y value" << endl;
+    return LowessResult(timestamps[index], 0, sum_w);
+}
+
+vector<LowessResult> lowess(const vector<double>& y_values, const vector<double>& weights, const vector<size_t>& timestamps, long long half_neighbors_count) {
+    long long values_count = y_values.size();
+    vector<LowessResult> results;
+    results.reserve(values_count);
+    for (long long index = 0; index < values_count; ++index) {
+        results.push_back(lowess(y_values, weights, timestamps, half_neighbors_count, index));
+    }
+    return results;
+}
+
 void save_lowess_results_to_binary_file(const string& filename, const vector<LowessResult>& results) {
     ofstream file(filename, ios::binary);
     if (!file.is_open()) {

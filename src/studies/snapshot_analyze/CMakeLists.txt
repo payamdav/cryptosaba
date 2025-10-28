@@ -1,2 +1,2 @@
 add_library(snapshot_analyze_lib SHARED snapshot_analyze.cpp)
-target_link_libraries(snapshot_analyze_lib utils candles statistics segmented_weighted_linear_regression)
+target_link_libraries(snapshot_analyze_lib utils candles statistics segmented_weighted_linear_regression lowess)

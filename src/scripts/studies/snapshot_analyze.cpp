@@ -8,6 +8,7 @@ int main(int argc, char* argv[]) {
     string symbol;
     size_t ts_seconds;
     double pips_threshold = 30;
+    long long lowess_half_neighbor = 900;
 
     if (argc > 1 && string(argv[1]) == "config") {
         // Read from config file
@@ -15,6 +16,9 @@ int main(int argc, char* argv[]) {
         symbol = config.get("snapshot_symbol");
         ts_seconds = config.get_timestamp("snapshot_timestamp") / 1000;
         pips_threshold = config.get_double("snapshot_pips_threshold");
+        if (config.exist("lowess.half_neighbor")) {
+            lowess_half_neighbor = config.get_int("lowess.half_neighbor");
+        }
 
         cout << "Reading from config file:" << endl;
     } else {
@@ -40,10 +44,12 @@ int main(int argc, char* argv[]) {
     cout << "  Symbol: " << symbol << endl;
     cout << "  Timestamp: " << ts_seconds << "s (" << utils::get_utc_datetime_string(ts_seconds * 1000) << ")" << endl;
     cout << "  Pips threshold: " << pips_threshold << endl;
+    cout << "  LOWESS half_neighbor: " << lowess_half_neighbor << endl;
     cout << endl;
 
     SnapshotAnalyze analyzer(symbol, ts_seconds);
     analyzer.pips_threshold_for_segmentation = pips_threshold;
+    analyzer.lowess_half_neighbor = lowess_half_neighbor;
     analyzer.analyze();
     analyzer.print_summary();
     analyzer.export_to_binary();

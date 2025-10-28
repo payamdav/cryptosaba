@@ -23,3 +23,7 @@
 * for visualization the data must exported to bin or csv files (I prefer binary) after that another project in js will visualize for me
 * also I need l1dn1d versions of volume normalized and ofsetted scaled price for visualizing and maybe further calculation. 
 * export l1dn1d prices and vols and also symbol and current ts to files. also export l1dn1d original candles.
+
+## Creating label for snapshot
+Label here means the one that we may use to feed in machine learnong models. so the label may tell us how the next swing of price will goes. it is better  for that label to be a double number. 
+* at first step I prefer to have a smooth curve of weighted price for next day. so It is better to have lowess of vwap weighted by v on whole l1dn1d
