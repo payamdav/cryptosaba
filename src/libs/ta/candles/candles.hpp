@@ -35,7 +35,7 @@ class Candle {
         void push(const Trade& trade); // add trade to candle
         void push(const Candle& candle); // add candle to candle ( useful for building higher timeframe candles from 1s timeframe candles )
 
-        size_t candle_end_time();
+        size_t candle_end_time() const;
         bool is_time_in_candle(size_t t);
         bool is_time_before_candle(size_t t);
         bool is_time_next_candle(size_t t);

@@ -140,7 +140,7 @@ void Candle::push(const Candle& candle) {
     this->vwap = this->v != 0 ? this->q / this->v : 0;
 }
 
-size_t Candle::candle_end_time() {
+size_t Candle::candle_end_time() const {
     return this->t + this->timeframe * 1000 - 1;
 } 
 
