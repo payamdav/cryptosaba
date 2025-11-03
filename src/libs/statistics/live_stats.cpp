@@ -69,9 +69,10 @@ void statistics::LiveStatsFixed::reset() {
     reset_values();
 }
 
-statistics::LiveAvgPeriodic::LiveAvgPeriodic(size_t period) : period(period), buffer(period) {}
+statistics::LiveAvgPeriodic::LiveAvgPeriodic(size_t period, bool non_zero_only) : period(period), buffer(period), non_zero_only(non_zero_only) {}
 
 void statistics::LiveAvgPeriodic::push(double value) {
+    if (non_zero_only && (value < epsilon && value > -epsilon)) return;
     sum += value;
     if (buffer.full()) sum -= buffer.front();
     buffer.push_back(value);

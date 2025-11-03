@@ -1,5 +1,5 @@
 add_library(trend_detector_lib SHARED trend_detector.cpp)
-target_link_libraries(trend_detector_lib utils config candles pubsub)
+target_link_libraries(trend_detector_lib utils config candles zigzag pubsub statistics)
 
 add_executable(trend_detector_test trend_detector_test.cpp)
 target_link_libraries(trend_detector_test trend_detector_lib utils config)

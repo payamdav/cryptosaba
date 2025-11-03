@@ -42,12 +42,14 @@ namespace statistics {
 
     class LiveAvgPeriodic {
         public:
+            static constexpr double epsilon = 1e-10;
             double sum = 0.0;
             double mean = 0.0;
             size_t period;
             boost::circular_buffer<double> buffer;
+            bool non_zero_only;
 
-            LiveAvgPeriodic(size_t period=10);
+            LiveAvgPeriodic(size_t period=10, bool non_zero_only=false);
             void push(double value);
             void reset();
     };
