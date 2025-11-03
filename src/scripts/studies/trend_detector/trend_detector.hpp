@@ -25,6 +25,7 @@ class SymbolInfo {
     SymbolInfo& operator=(const SymbolInfo&) = delete;
 
     // Public members
+    Candles candles_1s;
     Candles candles_1m;
     Candles candles_1h;
     statistics::LiveAvgPeriodic avg_candle_size_1s;

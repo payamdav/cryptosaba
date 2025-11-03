@@ -4,6 +4,7 @@
 
 
 SymbolInfo::SymbolInfo() :
+    candles_1s(1, 7 * 24 * 60 * 60),
     candles_1m(60, 7 * 24 * 60),
     candles_1h(3600, 7 * 24),
     avg_candle_size_1s(7 * 24 * 60 * 60),
@@ -14,6 +15,7 @@ SymbolInfo::SymbolInfo() :
 }
 
 void SymbolInfo::push_candle_1s(const Candle& candle) {
+    this->candles_1s.push(candle);
     this->candles_1m.push(candle);
     this->candles_1h.push(candle);
     this->avg_candle_size_1s.push(abs(candle.h - candle.l));
@@ -55,7 +57,8 @@ void SymbolInfo::push_candle_1s(const Candle& candle) {
 
     // Check if all containers are full and set ready flag
     if (!ready) {
-        if (candles_1m.full() &&
+        if (candles_1s.full() &&
+            candles_1m.full() &&
             candles_1h.full() &&
             avg_candle_size_1s.buffer.full() &&
             avg_candle_size_1m.buffer.full() &&

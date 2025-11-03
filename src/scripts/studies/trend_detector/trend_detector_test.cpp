@@ -3,7 +3,9 @@
 #include "../../../libs/core/pubsub/pubsub.hpp"
 #include "../../../libs/utils/datetime_utils.hpp"
 #include "../../../libs/utils/timer.hpp"
+#include "../../../libs/utils/file_utils.hpp"
 #include <iostream>
+#include <fstream>
 
 using namespace std;
 
@@ -12,6 +14,118 @@ SymbolInfo& symbolInfo = SymbolInfo::getInstance();
 Config& config = Config::getInstance();
 PubSub& pubsub = PubSub::getInstance();
 TrendDetector detector;
+
+// Containers for candles from ready point onward
+vector<Candle> candles_1s_from_ready;
+vector<Candle> candles_1m_from_ready;
+vector<Candle> candles_1h_from_ready;
+
+void save_candles_to_csv(const vector<Candle>& candles, const string& filename, const string& timeframe_name) {
+    ofstream file(filename);
+    if (!file.is_open()) {
+        cerr << "Error: Could not open file " << filename << " for writing" << endl;
+        return;
+    }
+
+    // Write CSV header
+    file << "timestamp,datetime,timeframe,open,high,low,close,vwap,volume,volume_sell,volume_buy,count" << endl;
+
+    // Write candle data
+    for (size_t i = 0; i < candles.size(); i++) {
+        const Candle& c = candles[i];
+        file << c.t << ","
+             << utils::get_utc_datetime_string(c.t) << ","
+             << timeframe_name << ","
+             << c.o << ","
+             << c.h << ","
+             << c.l << ","
+             << c.c << ","
+             << c.vwap << ","
+             << c.v << ","
+             << c.vs << ","
+             << c.vb << ","
+             << c.n << endl;
+    }
+
+    file.close();
+    cout << "Saved " << candles.size() << " candles to " << filename << endl;
+}
+
+void save_trends_to_csv(const vector<Trend>& trends, const string& filename) {
+    ofstream file(filename);
+    if (!file.is_open()) {
+        cerr << "Error: Could not open file " << filename << " for writing" << endl;
+        return;
+    }
+
+    // Write CSV header
+    file << "trend_id,start_ts,start_datetime,end_ts,end_datetime,start_price,end_price,"
+         << "slope,intercept,r_squared,error,candle_count,zigzag_001_points,zigzag_003_points" << endl;
+
+    // Write trend data
+    for (size_t i = 0; i < trends.size(); i++) {
+        const Trend& t = trends[i];
+        file << i + 1 << ","
+             << t.start_ts << ","
+             << utils::get_utc_datetime_string(t.start_ts) << ","
+             << t.end_ts << ","
+             << utils::get_utc_datetime_string(t.end_ts) << ","
+             << t.start_price << ","
+             << t.end_price << ","
+             << t.slope << ","
+             << t.intercept << ","
+             << t.r_squared << ","
+             << t.error << ","
+             << t.candle_count << ","
+             << t.zigzag_001->size() << ","
+             << t.zigzag_003->size() << endl;
+    }
+
+    file.close();
+    cout << "Saved " << trends.size() << " trends to " << filename << endl;
+}
+
+void save_zigzag_points_to_csv(const vector<Trend>& trends, const string& filename_001, const string& filename_003) {
+    // Save zigzag_001 points
+    ofstream file_001(filename_001);
+    if (file_001.is_open()) {
+        file_001 << "trend_id,point_id,timestamp,datetime,price,is_high" << endl;
+        for (size_t i = 0; i < trends.size(); i++) {
+            const ZigZag& zz = *trends[i].zigzag_001;
+            for (size_t j = 0; j < zz.size(); j++) {
+                const Zig& point = zz[j];
+                file_001 << i + 1 << ","
+                         << j + 1 << ","
+                         << point.t << ","
+                         << utils::get_utc_datetime_string(point.t) << ","
+                         << point.p << ","
+                         << (point.h ? "true" : "false") << endl;
+            }
+        }
+        file_001.close();
+        cout << "Saved zigzag_001 points to " << filename_001 << endl;
+    }
+
+    // Save zigzag_003 points
+    ofstream file_003(filename_003);
+    if (file_003.is_open()) {
+        file_003 << "trend_id,point_id,timestamp,datetime,price,is_high" << endl;
+        for (size_t i = 0; i < trends.size(); i++) {
+            const ZigZag& zz = *trends[i].zigzag_003;
+            for (size_t j = 0; j < zz.size(); j++) {
+                const Zig& point = zz[j];
+                file_003 << i + 1 << ","
+                         << j + 1 << ","
+                         << point.t << ","
+                         << utils::get_utc_datetime_string(point.t) << ","
+                         << point.p << ","
+                         << (point.h ? "true" : "false") << endl;
+            }
+        }
+        file_003.close();
+        cout << "Saved zigzag_003 points to " << filename_003 << endl;
+    }
+}
 
 void print_symbol_info_stats(const string& title) {
     cout << "\n=== " << title << " ===" << endl;
@@ -44,8 +158,12 @@ void feed_from_candles(string symbol, size_t start_ts, size_t end_ts) {
     // Track when SymbolInfo becomes ready
     bool was_ready = symbolInfo.ready;
 
+    // Track last timestamps for detecting completed candles
+    size_t last_1m_ts = 0;
+    size_t last_1h_ts = 0;
+
     // Subscribe to published candles
-    pubsub.subscribe("candle", [&was_ready](const void* data) {
+    pubsub.subscribe("candle", [&was_ready, &last_1m_ts, &last_1h_ts](const void* data) {
         const Candle* candle = static_cast<const Candle*>(data);
 
         // Always push to SymbolInfo
@@ -59,9 +177,46 @@ void feed_from_candles(string symbol, size_t start_ts, size_t end_ts) {
             cout << "Starting trend detection from this point..." << endl << endl;
         }
 
-        // Only push to TrendDetector once SymbolInfo is ready
+        // Store candles and push to TrendDetector once SymbolInfo is ready
         if (symbolInfo.ready) {
             detector.push_candle(*candle);
+
+            // Store 1s candles
+            candles_1s_from_ready.push_back(*candle);
+
+            // Store 1m candles (only when a new 1m candle starts)
+            if (symbolInfo.candles_1m.size() > 0) {
+                const Candle& current_1m = symbolInfo.candles_1m[symbolInfo.candles_1m.size() - 1];
+                if (current_1m.t != last_1m_ts) {
+                    if (last_1m_ts != 0 && candles_1m_from_ready.size() > 0) {
+                        // Update the last stored candle with completed values
+                        candles_1m_from_ready.back() = symbolInfo.candles_1m[symbolInfo.candles_1m.size() - 2];
+                    }
+                    // Push the new candle
+                    candles_1m_from_ready.push_back(current_1m);
+                    last_1m_ts = current_1m.t;
+                } else if (candles_1m_from_ready.size() > 0) {
+                    // Update the current candle
+                    candles_1m_from_ready.back() = current_1m;
+                }
+            }
+
+            // Store 1h candles (only when a new 1h candle starts)
+            if (symbolInfo.candles_1h.size() > 0) {
+                const Candle& current_1h = symbolInfo.candles_1h[symbolInfo.candles_1h.size() - 1];
+                if (current_1h.t != last_1h_ts) {
+                    if (last_1h_ts != 0 && candles_1h_from_ready.size() > 0) {
+                        // Update the last stored candle with completed values
+                        candles_1h_from_ready.back() = symbolInfo.candles_1h[symbolInfo.candles_1h.size() - 2];
+                    }
+                    // Push the new candle
+                    candles_1h_from_ready.push_back(current_1h);
+                    last_1h_ts = current_1h.t;
+                } else if (candles_1h_from_ready.size() > 0) {
+                    // Update the current candle
+                    candles_1h_from_ready.back() = current_1h;
+                }
+            }
         }
     });
 
@@ -117,6 +272,21 @@ void run_trend_detection_test() {
         cout << "  ZigZag points (0.10%): " << trend.zigzag_001->size() << endl;
         cout << "  ZigZag points (0.30%): " << trend.zigzag_003->size() << endl;
     }
+
+    // Save data to CSV files
+    cout << "\n=== Saving Data to Files ===" << endl;
+    string files_path = config.files_path;
+
+    // Ensure directory exists
+    utils::create_directory(files_path);
+
+    save_candles_to_csv(candles_1s_from_ready, files_path + "/candles_1s.csv", "1s");
+    save_candles_to_csv(candles_1m_from_ready, files_path + "/candles_1m.csv", "1m");
+    save_candles_to_csv(candles_1h_from_ready, files_path + "/candles_1h.csv", "1h");
+    save_trends_to_csv(detector.trends, files_path + "/trends.csv");
+    save_zigzag_points_to_csv(detector.trends, files_path + "/zigzag_001.csv", files_path + "/zigzag_003.csv");
+
+    cout << "\nAll files saved to: " << files_path << endl;
 }
 
 int main() {
