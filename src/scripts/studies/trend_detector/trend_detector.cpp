@@ -1,6 +1,10 @@
 #include "trend_detector.hpp"
+#include "../../../libs/core/config/config.hpp"
 #include "../../../libs/core/pubsub/pubsub.hpp"
 #include <cmath>
+
+// Initialize static member
+SymbolInfo* Trend::symbol_info = nullptr;
 
 
 SymbolInfo::SymbolInfo() :
@@ -70,9 +74,19 @@ void SymbolInfo::push_candle_1s(const Candle& candle) {
 }
 
 Trend::Trend() {
+    Config& config = Config::getInstance();
+    double delta1 = config.get_double("trend_detector_zigzag_delta_1");
+    double delta2 = config.get_double("trend_detector_zigzag_delta_2");
     // Allocate zigzag instances with specified deltas using unique_ptr
-    zigzag_001 = make_unique<ZigZag>(0.0010, 1000);
-    zigzag_003 = make_unique<ZigZag>(0.0030, 1000);
+    zigzag_1 = make_unique<ZigZag>(delta1, 1000);
+    zigzag_2 = make_unique<ZigZag>(delta2, 1000);
+}
+
+TrendDetector::TrendDetector() {
+    // Initialize static symbol_info pointer if not already set
+    if (!Trend::symbol_info) {
+        Trend::symbol_info = &SymbolInfo::getInstance();
+    }
 }
 
 void TrendDetector::push_candle(const Candle& candle) {
@@ -80,7 +94,8 @@ void TrendDetector::push_candle(const Candle& candle) {
         this->push_into_new_trend(candle);
     } else {
         // Logic to determine if candle continues current trend or starts new trend
-        trends.back().push_candle(candle);
+        // Using tail-based error for better responsiveness to recent changes
+        trends.back().push_candle(candle, trend_tail_count_for_error);
         if (trends.back().error > max_allowed_error) {
             // finalize current trend and start a new one
             this->push_into_new_trend(candle);
@@ -93,11 +108,11 @@ void TrendDetector::push_into_new_trend(const Candle& candle) {
     Trend new_trend;
     new_trend.start_ts = candle.t;
     new_trend.start_price = candle.vwap;
-    new_trend.push_candle(candle);
+    new_trend.push_candle(candle, trend_tail_count_for_error);
     trends.push_back(std::move(new_trend));
 }
 
-void Trend::push_candle(const Candle& candle) {
+void Trend::push_candle_full(const Candle& candle) {
     // Optimized O(1) implementation using running accumulators
 
     // NOTE: Uncomment the line below if you need to store individual candles for later use
@@ -112,8 +127,8 @@ void Trend::push_candle(const Candle& candle) {
     double w = candle.v;
 
     // Push to zigzag indicators
-    this->zigzag_001->push(candle.t, candle.vwap);
-    this->zigzag_003->push(candle.t, candle.vwap);
+    this->zigzag_1->push(candle.t, candle.vwap);
+    this->zigzag_2->push(candle.t, candle.vwap);
 
     // Update all 6 accumulators incrementally (O(1) operation)
     acc_w += w;
@@ -167,74 +182,84 @@ void Trend::push_candle(const Candle& candle) {
     }
 }
 
-void Trend::push_candle_old(const Candle& candle) {
-    cout << "push candle old called" << endl;
-    // Recalculate weighted linear regression with new candle
-    this->candles.push_back(candle);
+void Trend::push_candle(const Candle& candle, size_t trend_tail_count_for_error) {
     this->end_ts = candle.candle_end_time();
     this->end_price = candle.vwap;
-    
-    double sum_w = 0, sum_wx = 0, sum_wy = 0, sum_wxx = 0, sum_wxy = 0;
 
-    for (size_t i = 0; i < candles.size(); i++) {
-        double x = static_cast<double>(i);
-        double y = candles[i].vwap;
-        double w = candles[i].v;
+    // Extract values for this candle
+    double x = static_cast<double>(candle_count);
+    double y = candle.vwap;
+    double w = candle.v;
 
-        sum_w += w;
-        sum_wx += w * x;
-        sum_wy += w * y;
-        sum_wxx += w * x * x;
-        sum_wxy += w * x * y;
-    }
+    // Push to zigzag indicators
+    this->zigzag_1->push(candle.t, candle.vwap);
+    this->zigzag_2->push(candle.t, candle.vwap);
 
-    if (sum_w == 0) {
+    // Update all 6 accumulators incrementally (O(1) operation)
+    acc_w += w;
+    acc_wx += w * x;
+    acc_wy += w * y;
+    acc_wxx += w * x * x;
+    acc_wxy += w * x * y;
+    acc_wyy += w * y * y;
+
+    candle_count++;
+
+    if (acc_w == 0) {
         slope = 0;
+        this->intercept = 0;
         error = 0;
+        r_squared = 0;
         return;
     }
 
-    // Calculate slope and intercept
-    double denominator = sum_w * sum_wxx - sum_wx * sum_wx;
-    double intercept = 0;
+    // Calculate slope and intercept using accumulators
+    double denominator = acc_w * acc_wxx - acc_wx * acc_wx;
 
     if (abs(denominator) < 1e-10) {
         slope = 0;
-        intercept = sum_wy / sum_w;
+        this->intercept = acc_wy / acc_w;
     } else {
-        slope = (sum_w * sum_wxy - sum_wx * sum_wy) / denominator;
-        intercept = (sum_wy - slope * sum_wx) / sum_w;
+        slope = (acc_w * acc_wxy - acc_wx * acc_wy) / denominator;
+        this->intercept = (acc_wy - slope * acc_wx) / acc_w;
     }
 
-    // Calculate weighted error (RMSE) and R²
-    double weighted_mean = sum_wy / sum_w;
+    // Calculate error on the tail using SymbolInfo.candles_1s
     double sum_weighted_sq_error = 0;
-    double sum_weighted_sq_total = 0;
     double sum_weights = 0;
 
-    for (size_t i = 0; i < candles.size(); i++) {
-        double x = static_cast<double>(i);
-        double y = candles[i].vwap;
-        double predicted = slope * x + intercept;
-        double residual = y - predicted;
-        double deviation = y - weighted_mean;
-        double w = candles[i].v;
+    // Determine how many candles to use for error calculation
+    size_t error_calculation_count = std::min(trend_tail_count_for_error, candle_count);
 
-        sum_weighted_sq_error += w * residual * residual;
-        sum_weighted_sq_total += w * deviation * deviation;
-        sum_weights += w;
-    }
+    // Start index in the trend (for x coordinate)
+    size_t start_index = candle_count - error_calculation_count;
 
-    if (sum_weights == 0) {
-        error = 0;
-        r_squared = 0;
-    } else {
-        error = sqrt(sum_weighted_sq_error / sum_weights);
+    // Access the tail of SymbolInfo.candles_1s
+    if (symbol_info && symbol_info->candles_1s.size() > 0) {
+        size_t candles_available = symbol_info->candles_1s.size();
+        size_t actual_count = std::min(error_calculation_count, candles_available);
 
-        if (sum_weighted_sq_total > 0) {
-            r_squared = 1.0 - (sum_weighted_sq_error / sum_weighted_sq_total);
-        } else {
-            r_squared = 1.0;
+        for (size_t i = 0; i < actual_count; ++i) {
+            // Access from the end of candles_1s: last candle is at index (size - 1)
+            size_t candle_index = candles_available - actual_count + i;
+            const Candle& tail_candle = symbol_info->candles_1s[candle_index];
+
+            double current_x = start_index + i;
+            double current_y = tail_candle.vwap;
+            double current_w = tail_candle.v;
+
+            double predicted_y = slope * current_x + intercept;
+            double residual = current_y - predicted_y;
+            sum_weighted_sq_error += current_w * residual * residual;
+            sum_weights += current_w;
         }
     }
+
+    if (sum_weights > 0) {
+        error = sqrt(sum_weighted_sq_error / sum_weights);
+    } else {
+        error = 0;
+    }
 }
+
+// Removed push_candle_old - no longer needed after optimization

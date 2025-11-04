@@ -17,15 +17,15 @@ void utils::Timer::reset() {
 void utils::Timer::checkpoint(string checkpoint_name) {
 
     auto now = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - last);
-    auto total_duration = std::chrono::duration_cast<std::chrono::seconds>(now - start);
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - last);
+    auto total_duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - start);
     if (name.size() > 0) {
         std::cout << " Timer: " << name << " ";
     }
     if (checkpoint_name.size() > 0) {
         std::cout << "Checkpoint: " << checkpoint_name << " ";
     }
-    std::cout << "Duration: " << duration.count() << "s Laps  --  " << total_duration.count() << "s From Start." << std::endl;
+    std::cout << "Duration: " << duration.count() << "ms Laps  --  " << total_duration.count() << "ms From Start." << std::endl;
     last = now;
 }
 

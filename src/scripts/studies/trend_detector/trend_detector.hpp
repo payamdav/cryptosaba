@@ -5,7 +5,6 @@
 #include "../../../libs/statistics/live_stats.hpp"
 #include <string>
 #include <vector>
-#include <deque>
 #include <memory>
 #include <cstddef>
 
@@ -73,16 +72,18 @@ class Trend {
     double r_squared=0.0;
     double error=0.0;
 
-    deque<Candle> candles;  // Using deque for O(1) push_back without reallocation
     vector<TrendSample> samples;
-    size_t candle_count = 0; // Current candle count (can use instead of candles.size())
+    size_t candle_count = 0; // Current candle count
 
-    unique_ptr<ZigZag> zigzag_001;  // ZigZag with 0.0010 delta
-    unique_ptr<ZigZag> zigzag_003;  // ZigZag with 0.0030 delta
+    unique_ptr<ZigZag> zigzag_1;  // ZigZag with 0.0010 delta
+    unique_ptr<ZigZag> zigzag_2;  // ZigZag with 0.0030 delta
+
+    // Static reference to SymbolInfo for accessing candles_1s
+    static SymbolInfo* symbol_info;
 
     Trend();
-    void push_candle(const Candle& candle);
-    void push_candle_old(const Candle& candle);
+    void push_candle(const Candle& candle, size_t trend_tail_count_for_error);
+    void push_candle_full(const Candle& candle);
 
     private:
     // Weighted least squares running accumulators for O(1) incremental updates
@@ -98,9 +99,10 @@ class Trend {
 class TrendDetector {
     public:
     double max_allowed_error = 0.01; // maximum allowed error for linear regression
+    size_t trend_tail_count_for_error = 1000;
     vector<Trend> trends;
 
-    TrendDetector() = default;
+    TrendDetector();
     void push_candle(const Candle& candle);
     void push_into_new_trend(const Candle& candle);
 
